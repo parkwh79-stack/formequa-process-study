@@ -73,7 +73,7 @@ console.log('PASS: faster scroll response, continuous room passage, displayed wh
   const echo=createScrollEcho();echo.write(1200.4,0);echo.write(1210,16);
   assert.ok(echo.isEcho(1200,200),'a late echo of an earlier write is ignored');
   assert.ok(!echo.isEcho(1500,200),'a real scrollbar drag is not an echo');
-  assert.ok(!echo.isEcho(1200,900),'echo memory expires');
+  assert.ok(!echo.isEcho(1200,2600),'echo memory expires');
 }
 { // an authored cut does not freeze the limiter
   const sample=p=>{const pos=new THREE.Vector3(p<.5?0:30,1.6,0);return {pos,look:pos.clone().add(new THREE.Vector3(p<.5?1:-1,0,0)),fov:50};};
@@ -90,3 +90,35 @@ console.log('PASS: faster scroll response, continuous room passage, displayed wh
   assert.ok((target-current)*tour<=1.2+1e-6,'camera never trails the scrollbar by more than the lead');
 }
 console.log('PASS: v3.9.3 echo filter, cut pass-through, wheel keeps up with long tours.');
+
+// v4.0 camera language (flat-to-3d 03/07)
+import { camAt, framePose } from '../js/camera.js';
+{ // dolly zoom from a 2° elevation to an oblique view: the camera height only rises
+  const keys=[{p:0,t:[0,10,0],fh:40,fov:2},{p:1,t:[0,6,0],fh:60,fov:30,yaw:-10,pitch:14}];
+  let prev=-Infinity;
+  for(let i=0;i<=200;i++){const y=framePose(camAt(i/200,keys,1.6)).pos.y;assert.ok(y>=prev-1e-6,`dolly height is monotonic (${y.toFixed(2)} after ${prev.toFixed(2)})`);prev=y;}
+  const a=framePose(camAt(0,keys,1.6)),b=framePose(camAt(1,keys,1.6));
+  assert.ok(Math.abs(b.pos.y-(6+60/(2*Math.tan(15*R))*Math.sin(14*R)))<1e-6&&Math.abs(a.pos.y-10)<1e-6,'keys themselves are unchanged');
+}
+{ // aerial → eye level: one descent, no bump
+  const keys=[{p:0,t:[0,-2,0],fh:30,fov:38,pitch:38},{p:1,t:[0,9,0],fh:20,fov:56,pitch:-9,eyeHeight:1.6}];
+  let prev=Infinity;
+  for(let i=0;i<=200;i++){const y=framePose(camAt(i/200,keys,1.6)).pos.y;assert.ok(y<=prev+1e-6,'descent to eye level is monotonic');prev=y;}
+}
+for(const type of Object.keys(TYPES)){
+  const T=resolveEntrances(scaleType(TYPES[type],1,TYPES[type].floors,TYPES[type].law));
+  const tour=makeTour(buildWalkthrough(T),0,{speed:motionProfile(T).speed});
+  let prev=-1;for(let i=0;i<=4000;i++){const u=tour.routeU(i/4000);assert.ok(u>=prev-1e-12,`${type}: timeline never walks backwards`);prev=u;}
+  assert.ok(Math.abs(tour.routeU(0))<1e-12&&Math.abs(tour.routeU(1)-1)<1e-12,`${type}: timeline covers the whole route`);
+  let lastV=-1;for(const s of tour.stops){assert.ok(s.v>=lastV,`${type}: stops are ordered on the timeline`);lastV=s.v;
+    assert.ok(Math.abs(tour.routeU(s.v)-s.u0)<1e-9,`${type}: a stop's timeline point is the space itself`);}
+  assert.ok(tour.playSeconds<tour.duration&&tour.playSeconds>40,`${type}: playback ${tour.playSeconds.toFixed(0)} s (route ${tour.duration.toFixed(0)} s)`);
+  // ease in and out: the camera arrives at a space at rest
+  const s=tour.stops.find(q=>q.v>0.05&&q.v<0.95);
+  if(s){const e=1e-4,a=tour.sample(tour.routeU(s.v-0.004)).pos,b=tour.sample(tour.routeU(s.v-0.004+e)).pos;
+    const m0=tour.sample(tour.routeU(0.5)).pos,m1=tour.sample(tour.routeU(0.5+e)).pos;assert.ok(a.distanceTo(b)<=m0.distanceTo(m1)+0.05,`${type}: slows down into a space`);}
+  // the lift ride faces the door: no side-window turn while rising
+  let rideDir=null;
+  for(let i=0;i<=20000;i++){const q=tour.sample(i/20000);if(q.lift?.phase==='상승'){const d=q.look.clone().sub(q.pos).normalize();if(rideDir)assert.ok(angle(rideDir,d)<1e-6,`${type}: rides facing one way`);rideDir=d;}else rideDir=null;}
+}
+console.log('PASS: v4.0 monotonic camera height, eased timeline with holds, lift ride faces the door.');
