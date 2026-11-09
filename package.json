@@ -1,0 +1,15 @@
+{
+  "name": "formequa-process-study",
+  "version": "3.8.0",
+  "private": true,
+  "type": "module",
+  "description": "Scroll-driven Korean architecture process and multi-floor walkthrough study",
+  "scripts": {
+    "build": "node scripts/build-static.mjs",
+    "test": "node test/fit.mjs && node test/regressions.mjs && node test/camera.test.mjs",
+    "test:camera": "node test/camera.test.mjs"
+  },
+  "devDependencies": {
+    "three": "0.169.0"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "formequa-process-study"
+  },
+  "targets": {
+    "formequa-process-study": {
+      "hosting": {
+        "study": [
+          "formequa-process-study"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

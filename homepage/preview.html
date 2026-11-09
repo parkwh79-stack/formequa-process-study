@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FORMEQUA — Process section preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>:root{--font-serif:'Cormorant Garamond',Georgia,serif;--font-sans:'Noto Sans KR','SUIT Variable',Arial,sans-serif} body{margin:0;background:#f5f3ee}
+.bar{display:flex;justify-content:space-between;padding:22px 5vw;font:600 20px/1 'Noto Sans KR',Arial;letter-spacing:.14em;color:#242622;border-bottom:1px solid rgba(17,19,24,.085)} .bar small{font:500 12px 'Noto Sans KR';letter-spacing:.04em;color:#6b7280}</style></head>
+<body><div class="bar">FORMEQUA<small>미리보기 · 03 THE ATELIER 다음에 들어갈 섹션</small></div>
+<!--
+  FORMEQUA 홈페이지에 넣을 섹션 — "04 / FROM DRAWING TO SITE"
+  위치(추천): 03 / THE ATELIER 섹션 바로 다음, 현재 04 / READING THE SITE 앞. 이후 섹션 번호는 하나씩 밀린다.
+  · 포메퀴아의 CSS 변수(--font-serif, --text-primary 등)를 그대로 쓰고, 없으면 아래 기본값으로 동작한다.
+  · 링크 주소 ../index.html은 배포 위치에 맞게 바꾼다 (예: Firebase hosting의 /process/ 또는 GitHub Pages 주소).
+  · 이미지 process-study.png는 같은 폴더의 미리보기 캡처. 홈페이지의 이미지 폴더로 옮겨 경로를 맞춘다.
+-->
+<section id="process" class="fq-process" aria-labelledby="fq-process-title">
+  <style>
+    .fq-process { --fq-ink: var(--text-primary, #242622); --fq-soft: var(--text-muted, #6b7280); --fq-olive: #424a3b; --fq-olive2: #707960;
+      --fq-line: var(--border-subtle, rgba(17,19,24,.085)); --fq-serif: var(--font-serif, 'Cormorant Garamond', Georgia, serif);
+      --fq-sans: var(--font-sans, 'SUIT Variable', 'Pretendard Variable', Arial, sans-serif);
+      padding-block: clamp(72px, 10vw, 140px); padding-inline: max(20px, 5vw); color: var(--fq-ink); font-family: var(--fq-sans); }
+    .fq-process .fq-head { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; margin-bottom: clamp(28px, 4vw, 56px); }
+    .fq-process .fq-label { font: 600 13px var(--fq-sans); letter-spacing: .09em; text-transform: uppercase; margin: 0; }
+    .fq-process .fq-aside { font: 500 11px var(--fq-sans); letter-spacing: .06em; color: var(--fq-soft); margin: 0; }
+    .fq-process .fq-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 24px 6vw; align-items: end; }
+    .fq-process h2 { font: 400 clamp(52px, 8vw, 104px)/.95 var(--fq-serif); letter-spacing: -.045em; margin: 0; text-wrap: balance; }
+    .fq-process h2 em { font-style: italic; color: var(--fq-olive); padding-left: .8em; }
+    .fq-process .fq-lede { font: 400 15px/1.85 var(--fq-sans); margin: 0; max-width: 34em; }
+    .fq-process .fq-frame { display: block; position: relative; margin-top: clamp(36px, 5vw, 72px); border-top: 1px solid var(--fq-line); padding-top: 18px; color: inherit; text-decoration: none; }
+    .fq-process .fq-frame img { display: block; width: 100%; max-width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; background: #ece9e1; }
+    .fq-process .fq-cta { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; font: 500 13px var(--fq-sans); }
+    .fq-process .fq-cta b { font-weight: 500; border-bottom: 1px solid var(--fq-ink); padding-bottom: 2px; }
+    .fq-process .fq-cta small { color: var(--fq-soft); font-size: 11px; }
+    .fq-process .fq-steps { list-style: none; padding: 0; margin: clamp(40px, 5vw, 64px) 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 32px; counter-reset: s; }
+    .fq-process .fq-steps li { border-top: 1px solid var(--fq-line); padding-top: 14px; min-width: 0; }
+    .fq-process .fq-steps li::before { counter-increment: s; content: counter(s, decimal-leading-zero); font: 500 11px var(--fq-sans); color: var(--fq-soft); letter-spacing: .08em; }
+    .fq-process .fq-steps b { display: block; font: 400 24px/1.1 var(--fq-serif); margin: 6px 0 6px; }
+    .fq-process .fq-steps b i { color: var(--fq-olive2); }
+    .fq-process .fq-steps span { font: 400 13px/1.7 var(--fq-sans); color: var(--fq-soft); }
+    .fq-process .fq-types { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 36px; font: 500 12.5px var(--fq-sans); }
+    .fq-process .fq-types a { color: var(--fq-ink); text-decoration: none; border-bottom: 1px solid transparent; padding-bottom: 2px; }
+    .fq-process .fq-types a:hover { border-bottom-color: var(--fq-ink); }
+    .fq-process .fq-note { margin-top: 18px; font: 400 11px var(--fq-sans); color: var(--fq-soft); }
+    @media (max-width: 760px) { .fq-process .fq-grid { grid-template-columns: 1fr; } .fq-process .fq-steps { grid-template-columns: 1fr 1fr; } }
+  </style>
+
+  <div class="fq-head">
+    <p class="fq-label">04 / From drawing to site</p>
+    <p class="fq-aside">ZONING · PARKING · SCHEDULE · INTERIOR</p>
+  </div>
+
+  <div class="fq-grid">
+    <h2 id="fq-process-title">From drawing<br><em>to site.</em></h2>
+    <p class="fq-lede">대지와 용도지역에서 시작해 규모와 주차 대수를 검토하고, 공정의 시간 위에 건물을 세운 뒤, 단면과 평면으로 구성을 살피고 그 안으로 걸어 들어갑니다. 장면과 주차를 직접 탐색하며 형태와 시간, 숫자를 함께 읽는 연구입니다.</p>
+  </div>
+
+  <a class="fq-frame" href="../index.html?type=midsize" target="_blank" rel="noopener">
+    <img src="process-study.png" alt="FORMEQUA 초기 버전의 공간 구성 연구 이미지" loading="lazy">
+    <span class="fq-cta"><b>스크롤 연구 열기 ↗</b><small>초기 스터디 이미지 · 6 building types</small></span>
+  </a>
+
+  <ol class="fq-steps">
+    <li><b>Elevation, <i>drawn.</i></b><span>2° 망원 렌즈로 본 3D 모델이 도면이 되고, 렌즈가 열리며 현장이 됩니다.</span></li>
+    <li><b>Zoning &amp; <i>parking.</i></b><span>건폐율·용적률·정북 일조와 법정 주차 대수로 최대 규모를 산출합니다.</span></li>
+    <li><b>Built in <i>time.</i></b><span>공정표가 부재를 세우고, 공사비와 PF 인출이 같은 시간축 위에서 움직입니다.</span></li>
+    <li><b>Section, <i>opened.</i></b><span>절단면의 크기를 유지하며 렌즈를 열고, 층마다 실내 구성을 살펴봅니다.</span></li>
+    <li><b>Plan, <i>cut.</i></b><span>바닥 위 1.2m에서 자른 평면도 — 방 이름과 면적, 치수.</span></li>
+    <li><b>Walked <i>through.</i></b><span>현관에서 방마다 멈추며 재료와 빛을 확인합니다.</span></li>
+  </ol>
+
+  <nav class="fq-types" aria-label="유형 바로가기">
+    <a href="../index.html?type=midsize" target="_blank" rel="noopener">중소형 빌딩 ↗</a>
+    <a href="../index.html?type=geunsaeng" target="_blank" rel="noopener">근생 빌딩 ↗</a>
+    <a href="../index.html?type=dasedae" target="_blank" rel="noopener">다세대주택 ↗</a>
+    <a href="../index.html?type=dormitory" target="_blank" rel="noopener">임대형기숙사 ↗</a>
+    <a href="../index.html?type=jeonwon" target="_blank" rel="noopener">전원주택 ↗</a>
+  </nav>
+  <p class="fq-note">학습·사전검토용 연구 화면이며 인허가 판단을 대신하지 않습니다.</p>
+</section>
+
+</body></html>

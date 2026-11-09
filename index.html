@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FORMEQUA — From Drawing to Site</title>
+<meta name="theme-color" content="#f5f3ee">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=3.8.8">
+<!-- 오류가 나면 화면에 바로 보여 준다 (모듈 로딩 실패·file:// 실행 등 진단용) -->
+<script>
+(function () {
+  function show(msg) {
+    var b = document.getElementById('err'); if (!b) { setTimeout(function () { show(msg); }, 50); return; }
+    b.style.display = 'block'; b.querySelector('pre').textContent += msg + '\n';
+  }
+  window.addEventListener('error', function (e) { show('오류: ' + (e.message || e.type) + (e.filename ? '\n  ' + e.filename + ':' + e.lineno : '')); });
+  window.addEventListener('unhandledrejection', function (e) { show('오류: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)); });
+  if (location.protocol === 'file:') show('index.html을 더블클릭으로 열면 동작하지 않습니다.\nVS Code Live Server 또는 run.bat(로컬 서버)로 열어 주세요.');
+  setTimeout(function () { if (!window.__ksReady) { document.getElementById('err').dataset.soft = '1'; show('25초가 지나도록 화면이 시작되지 않았습니다 (느린 PC는 더 걸릴 수 있습니다).\n· 로컬 서버(http://localhost…)로 열었는지\n· 인터넷 연결(three.js를 CDN에서 받음)\n· 브라우저 WebGL 지원 여부를 확인하세요.'); } }, 25000);
+})();
+</script>
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+    "./js/types.js": "./js/types.js?v=3.8.8",
+    "./js/project.js": "./js/project.js?v=3.8.8",
+    "./js/law.js": "./js/law.js?v=3.8.8",
+    "./js/parking.js": "./js/parking.js?v=3.8.8",
+    "./js/camera.js": "./js/camera.js?v=3.8.8",
+    "./js/walkthrough.js": "./js/walkthrough.js?v=3.8.8",
+    "./js/story.js": "./js/story.js?v=3.8.8",
+    "./js/kit.js": "./js/kit.js?v=3.8.8",
+    "./js/building.js": "./js/building.js?v=3.8.8",
+    "./js/interior.js": "./js/interior.js?v=3.8.8",
+    "./js/textures.js": "./js/textures.js?v=3.8.8",
+    "./js/sun.js": "./js/sun.js?v=3.8.8",
+    "./js/ui.js": "./js/ui.js?v=3.8.8",
+    "./js/elevator.js": "./js/elevator.js?v=3.8.8",
+    "./js/scroll-motion.js": "./js/scroll-motion.js?v=3.8.8",
+    "./js/access.js": "./js/access.js?v=3.8.8",
+    "./js/rect-patches.js": "./js/rect-patches.js?v=3.8.8"
+} }
+</script>
+</head>
+<body>
+<canvas id="gl" aria-hidden="true"></canvas>
+<div class="track" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="brand" href="https://formequa-research.web.app/#home" target="_blank" rel="noopener">FORMEQUA<small>Process Study · 도면에서 준공까지</small></a>
+  <nav class="types" aria-label="건물 유형">
+    <button data-type="midsize">중소형 빌딩</button>
+    <button data-type="geunsaeng">근생 빌딩</button>
+    <button data-type="dasedae">다세대주택</button>
+    <button data-type="dormitory">임대형기숙사</button>
+    <button data-type="jeonwon">전원주택</button>
+  </nav>
+  <nav class="jumps" aria-label="장면 이동">
+    <button data-jump="0">입면</button>
+    <button data-jump="0.135">법규</button>
+    <button data-jump="0.26">공정</button>
+    <button data-jump="0.58">단면</button>
+    <button data-jump="0.65">입구·1층</button>
+    <button data-jump="0.73">평면</button>
+    <button data-jump="0.8105">실내</button>
+    <button id="play">▶ 자동 재생</button>
+    <button id="hq" title="물리 하늘·앰비언트 오클루전">고품질</button>
+    <button id="estBtn" class="solid">법규·공사비 산정</button>
+  </nav>
+  <a class="wan2" href="https://wan2-website.web.app/" target="_blank" rel="noopener"><small>POWERED BY</small>WAN2 ↗</a>
+</header>
+
+<section class="hero">
+  <p class="kicker" id="kicker"></p>
+  <p class="eyebrow">04 / FROM DRAWING TO SITE</p>
+  <h1>From drawing<br><em>to site.</em></h1>
+  <p class="sub">도면이 현장이 되고, 현장이 숫자가 됩니다.<br>법규로 규모를 정하고, 공정으로 짓고, 실내까지 걸어 들어갑니다.</p>
+  <dl class="heroFacts" id="heroFacts"></dl>
+  <button class="hint" id="enterStudy">도면에서 시작하기 <span aria-hidden="true">↘</span></button>
+</section>
+
+<nav class="journey" aria-label="전체 장면 탐색">
+  <div class="journeyHead"><output id="chapterLabel" for="sceneScrub">01 / 11 · 입면도</output><span id="scenePercent">000%</span></div>
+  <div class="journeyControls">
+    <button id="chapterPrev" aria-label="이전 장면">←</button>
+    <input id="sceneScrub" type="range" min="0" max="1000" step="1" value="0" aria-label="전체 장면 진행률">
+    <button id="chapterNext" aria-label="다음 장면">→</button>
+  </div>
+</nav>
+
+<div class="pins" id="pins" aria-hidden="true"></div>
+<div class="pins" id="plabels" aria-hidden="true"></div>
+
+<div class="tb" aria-hidden="true">
+  <div><span>공사명</span><b id="tbName"></b></div>
+  <div><span>개요</span><b id="tbKind"></b></div>
+  <div><span>도면</span><b>정면도 (남측) · A-201</b></div>
+  <div><span>축척</span><b>1:200 — 실제로는 2° 망원 렌즈로 본 3D 모델</b></div>
+</div>
+<div class="planTitle" id="planTitle"></div>
+
+<div class="scan" id="scan" aria-hidden="true"></div>
+<div class="sweepLabel" id="sweepLabel" aria-hidden="true"></div>
+<aside class="beat" id="beat" aria-live="polite"></aside>
+<div class="status" id="status" aria-hidden="true"></div>
+
+<!-- v3.1 법규 장면: 대지 → 층별 건축가능영역 → 일조사선 → 자동 매스 결과 -->
+<aside class="lawcard" id="lawcard"></aside>
+
+<aside class="readout" id="readout"></aside>
+<div class="card" id="card"></div>
+
+<div class="tod" aria-label="시간대">
+  <button data-hour="9">아침</button>
+  <button data-hour="12.5">정오</button>
+  <button data-hour="17.5">골든아워</button>
+  <button data-hour="20">야간</button>
+</div>
+
+<!-- 실내 투어: 정지점 카드 · 이전/다음 · 미니 평면 -->
+<section class="tour">
+  <div class="tourHead"><output id="tourStop">실내 투어</output><button id="tourToggle" aria-expanded="true" aria-controls="tourDetails radar">공간만 보기 ↗</button></div>
+  <div class="tourActions"><button id="tourPlay" aria-pressed="false">▶ 층별 투어</button><button id="rideLift">승강기 타기 ↑</button></div>
+  <div id="tourDetails">
+    <div class="stabs" id="stabs" aria-label="실내 정지점"></div>
+    <div class="tcard" id="tcard"></div>
+  </div>
+  <div class="tnav"><button id="tprev">← 이전</button><div class="tdots" id="tdots"></div><button id="tnext">다음 →</button></div>
+</section>
+<div class="radar" id="radar"></div>
+<aside class="liftStatus" id="liftStatus" hidden aria-live="polite"></aside>
+
+<!-- v3.1 마무리 요약 (투어 끝) — 홈페이지에서는 아래에 소개·문의 섹션을 붙인다 -->
+<section class="closing" id="closing"></section>
+
+<footer class="dock">
+  <div class="buildScrub">
+    <label for="weekScrub">공정 탐색 <output id="weekLabel" for="weekScrub">0.0주</output></label>
+    <input id="weekScrub" type="range" min="0" max="1" step="0.1" value="0" aria-label="공정 주차 탐색">
+    <button id="buildPlay" aria-pressed="false">▶ 공정 재생</button>
+  </div>
+  <div class="gantt" id="gantt"></div>
+  <div class="fin">
+    <div class="finSvg" id="finSvg"></div>
+    <div class="finNums" id="finNums"></div>
+  </div>
+</footer>
+
+<!-- 공사비·공기 산정 패널 -->
+<aside class="est" id="est">
+  <div class="estHead"><b id="estTitle">공사비·공기 산정</b><button id="estClose">닫기 ×</button></div>
+  <div class="estBody" id="estBody"></div>
+</aside>
+
+<div class="err" id="err"><b>실행 중 문제가 생겼습니다</b><pre></pre><small>이 내용을 캡처해 알려 주시면 원인을 바로 찾을 수 있습니다.</small></div>
+
+<i class="mk tl"></i><i class="mk tr"></i><i class="mk bl"></i><i class="mk br"></i>
+<script type="module" src="js/main.js?v=3.8.8"></script>
+</body>
+</html>
