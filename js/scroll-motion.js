@@ -42,7 +42,7 @@ export function createWalkInput({burst=WALK_BUDGET.burst,refill=WALK_BUDGET.refi
 // Programmatic scrollTo() calls echo back as 'scroll' events, sometimes a few frames late on a busy
 // GPU. Remember recent writes so an echo is never mistaken for the user dragging the scrollbar
 // (v3.9.2 treated late echoes as a scrub and teleported the camera to the queued target).
-export function createScrollEcho(windowMs=500,tolerance=2){
+export function createScrollEcho(windowMs=2000,tolerance=2){
   const writes=[];
   return {
     write(y,now){writes.push({y,now});while(writes.length>24)writes.shift();},

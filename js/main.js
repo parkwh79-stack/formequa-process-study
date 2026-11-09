@@ -23,12 +23,12 @@ import { RULES_ASOF } from './law.js';
 import { PRJ, loadType, recompute, phaseByKey, floorY, roofY, dateAt, fmtDate, workDaysTo, clamp01, smooth, lerp, C, PYEONG } from './project.js';
 import { buildAll } from './building.js';
 import { FX } from './kit.js';
-import { camAt, setCam, framePose, limitCameraProgress, focalMM, poseToKey, makeTour } from './camera.js';
+import { camAt, setCam, framePose, focalMM, poseToKey, makeTour } from './camera.js';
 import { sunPosition } from './sun.js';
 import { ganttSVG, financeSVG, financeNums, renderEstimate, tourCard, radarSVG, won } from './ui.js';
 import { P, CHAPTERS, chapterAt, progressPerSecond, storyToScroll, scrollToStory } from './story.js';
 import { buildWalkthrough, groundVisit, motionProfile } from './walkthrough.js';
-import { createWalkInput, createProgressFollower, queueScrollProgress, createScrollEcho, scrollsNatively, motionCaps } from './scroll-motion.js';
+import { createScrollEcho, scrollsNatively } from './scroll-motion.js';
 
 const q = new URLSearchParams(location.search);
 const FIXED_P = q.has('p') ? parseFloat(q.get('p')) : null;
@@ -121,9 +121,10 @@ function buildKeys(T, H, big, siteW, hd) {
   const angles = motionProfile(T).yaw;
   const earth = ph('earth'), frame = ph('frame'), facade = ph('facade'), interior = ph('interior');
   const ks = [];
-  ks.push({ p: P.lawEnd + 0.012, t: [0, H * 0.1, 0], fh: big * 2.3, fov: 34, yaw: 30, pitch: 34, minW: siteW * 1.6 });
-  if (T.basement) ks.push({ p: pw((earth.w0 + earth.w1) * 0.5), t: [0, -T.basement * 0.5, 0], fh: T.W * 2.1, fov: 38, yaw: 16, pitch: 46, minW: siteW * 1.35 });   // 흙막이 속을 내려다봄
-  else ks.push({ p: pw((earth.w0 + earth.w1) * 0.5), t: [0, 0, 0], fh: big * 1.7, fov: 36, yaw: timber ? -20 : 22, pitch: 30, minW: siteW * 1.4 });
+  // v4.0: the aerial part only rises (law) and then descends once to eye level at the start of the frame.
+  ks.push({ p: P.lawEnd + 0.012, t: [0, H * 0.2, 0], fh: big * 2.4, fov: 30, yaw: 30, pitch: 34, minW: siteW * 1.8 });   // same frame as the last law step
+  if (T.basement) ks.push({ p: pw((earth.w0 + earth.w1) * 0.5), t: [0, -T.basement * 0.5, 0], fh: T.W * 2.1, fov: 38, yaw: 16, pitch: 38, minW: siteW * 1.35 });   // 흙막이 속을 내려다봄
+  else ks.push({ p: pw((earth.w0 + earth.w1) * 0.5), t: [0, 0, 0], fh: big * 1.7, fov: 36, yaw: 22, pitch: 34, minW: siteW * 1.4 });
   ks.push({ p: pw(frame.w0), t: [0, 1.5, 0], fh: big * (tall ? 1.6 : 1.8), fov: 38, yaw: 34, pitch: tall ? 16 : 22, minW: siteW * 1.3 });
   ks.push({ p: pw(frame.w0 + (frame.w1 - frame.w0) * 0.5), t: [0, H * 0.32, 0], fh: tall ? H * 1.3 : big * 2.0, fov: 40, yaw: tall ? 72 : 58, pitch: tall ? 8 : 14, minW: T.W * 1.8, ease: u => u });
   ks.push({ p: pw(frame.w1), t: [0, H * (tall ? 0.62 : 0.5), 0], fh: tall ? H * 1.25 : big * 1.85, fov: 42, yaw: tall ? 118 : 92, pitch: tall ? 2 : 10, minW: T.W * 1.7 });
@@ -161,7 +162,7 @@ function sectionKeys(T, H) {
   const z = SEC_Z(T), fh = H * 1.5, eye = floorY(1) + 1.6, visit = groundVisit(T);
   const ground = { ...poseToKey([T.W * 0.12, eye, z + 5.5], [T.W * 0.12, eye - 0.06, z - 3], FOV_WALK()), eyeHeight: eye };
   return [
-    { p: P.secIn, t: [0, H * 0.46, z], fh, fov: 6, yaw: 0, pitch: 1, minW: T.W * 1.7 },
+    { p: P.secIn, t: [0, H * 0.46, z], fh, fov: 6, yaw: 0, pitch: 1, minW: T.W * 1.7, eyeHeight: eye },   // v4.0: stay at eye level; the telephoto looks slightly up
     { p: P.secIn + 0.02, ...ground },
     { p: P.secOut - 0.012, ...poseToKey([T.W * 0.08, eye, z + 4.5], [T.W * 0.08, eye - 0.06, z - 3], FOV_WALK()), eyeHeight: eye },
     { p: P.secOut, ...poseToKey(visit[0].pos, visit[0].look, FOV_WALK()), eyeHeight: eye },
@@ -194,13 +195,16 @@ function buildWorld() {
   const H = roofY() + (T.roof === 'flat' ? 3 : 2.5), hd = T.D / 2, siteW = T.site.x1 - T.site.x0;
   const elevFh = H * 1.9, big = Math.max(H, siteW * 0.6);
   const start = poseToKey(tour.startPos, tour.startLook, FOV_WALK());
+  const lawYaw = motionProfile(T).yaw[0];
   const mkKeys = () => [
     { p: 0, t: [-siteW * 0.34, H * 0.5 - elevFh * 0.12, 0], fh: elevFh, fov: 2, minW: siteW * 1.75 },        // 입면도: 왼쪽 글 자리를 비우고 건물을 오른쪽에
     { p: P.flat, t: [-siteW * 0.34, H * 0.5 - elevFh * 0.12, 0], fh: elevFh, fov: 2, minW: siteW * 1.75 },
-    { p: P.open, t: [0, H * 0.12, 0], fh: big * 2.3, fov: 34, yaw: 30, pitch: 38, minW: siteW * 1.6 },
-    { p: P.open + 0.45 * (P.lawEnd - P.open), t: [0, H * 0.3, 0], fh: big * 2.4, fov: 30, yaw: 48, pitch: 30, minW: siteW * 1.7 },   // 층별 영역이 쌓이는 모습
-    { p: P.open + 0.68 * (P.lawEnd - P.open), t: [0, H * 0.4, -T.D * 0.2], fh: big * 2.6, fov: 30, yaw: 64, pitch: 26, minW: siteW * 1.8 },   // 비스듬히 옆에서 일조사선
-    { p: P.lawEnd - 0.006, t: [-siteW * 0.28, 0, T.D * 0.25], fh: (T.site.z1 - T.site.z0) * 2.1, fov: 30, yaw: 14, pitch: 64, minW: siteW * 2.2 },       // 위에서 주차구획
+    // v4.0 (flat-to-3d 07): the lens opens with the camera almost level, then one slow rise over the law steps.
+    // Same frame size throughout, pitch only grows (14 → 22 → 28 → 34°): the height rises once. Yaw drifts one way.
+    { p: P.open, t: [0, H * 0.18, 0], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.3, pitch: 14, minW: siteW * 1.8 },
+    { p: P.open + 0.45 * (P.lawEnd - P.open), t: [0, H * 0.22, 0], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.5, pitch: 22, minW: siteW * 1.8 },   // 층별 영역이 쌓이는 모습
+    { p: P.open + 0.68 * (P.lawEnd - P.open), t: [0, H * 0.22, -T.D * 0.1], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.7, pitch: 28, minW: siteW * 1.8 },   // 비스듬히 옆에서 일조사선
+    { p: P.lawEnd - 0.006, t: [-siteW * 0.1, H * 0.2, T.D * 0.1], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.85, pitch: 34, minW: siteW * 1.8 },       // 같은 높이에서 주차구획
     ...buildKeys(T, H, big, siteW, hd),
     ...streetKeys(T, H, hd),
     ...sectionKeys(T, H),
@@ -395,23 +399,26 @@ function switchType(key) {
 
 // ── 상태 · 입력 ─────────────────────────────────────────────────────────
 const state = { beat: -2, intro: (FIXED_P == null && !q.has('nointro') && !reducedMotion.matches) ? 0 : 1, lawStep: -1, p: FIXED_P ?? 0, target: FIXED_P ?? 0, hour: q.has('hour') ? parseFloat(q.get('hour')) : 14, playing: false, playTo:null, seeking: false, playBuildOnly: false, tourFocus: false, dirty: true, lastT: -1, lastHour: -1, lastStop: -2 };
-const motionFollower=createProgressFollower(state.p);
+// One exponential follower, as in flat-to-3d 03 (k = 5.5/s): the camera catches up with the scroll.
+const FOLLOW_RATE = 5.5;
+const followScroll = (p, target, dt) => Math.abs(target - p) < 1e-6 ? target : p + (target - p) * (1 - Math.exp(-FOLLOW_RATE * dt));
+const motionFollower = { reset() {} };   // kept for the jump/scrub call sites
 const scrollMax = () => Math.max(1, document.documentElement.scrollHeight - innerHeight);
-// The page scroll position mirrors the story. Our own writes echo back as 'scroll' events (late on a
-// busy GPU), so they are recognised and ignored; only real user scrolling (scrollbar drag, keys,
-// a panel overscrolling into the page) moves the story, and it does so smoothly, never by teleport.
+// v4.0 (flat-to-3d 03/07): the page scrolls natively and the camera is a pure function of a smoothed
+// scroll position — one exponential follower, no route-time budget and no speed governor. Autoplay
+// moves the same scroll position, so playback and the hand share the same camera response.
+// Our own scrollTo() writes (autoplay, buttons) echo back as 'scroll' events and are ignored.
 const scrollEcho=createScrollEcho();
 addEventListener('scroll', () => {
   if (FIXED_P != null) return;
   const now=performance.now();
   if (now<(state.scrollSyncUntil||0) || scrollEcho.isEcho(scrollY,now)) return;
   const p=scrollToStory(clamp01(scrollY / scrollMax()));
-  scrollEcho.write(scrollY,now);
   if(state.playing)setPlaying(false);
   state.intro=1;state.seeking=false;
   if(state.jump&&!state.jump.applied){state.jump.to=p;state.target=p;return;}
-  if(!reducedMotion.matches&&Math.abs(p-state.p)>.06){state.jump={to:p,t:0,applied:false};state.target=p;return;}   // long scrollbar drag: short paper fade
-  state.target=p;state.direct=true;                                                                       // follow without the walking limits
+  if(!reducedMotion.matches&&Math.abs(p-state.p)>.08){state.jump={to:p,t:0,applied:false};state.target=p;return;}   // scrollbar drag across scenes: short paper fade
+  state.target=p;
 }, { passive: true });
 function scrollToP(p, smoothScroll = true) {
   const value = clamp01(p);
@@ -439,7 +446,7 @@ function navigate(p, smoothScroll = true, seek = false) {
 function setPlaying(on, buildOnly = false) {
   state.playing = on; state.playBuildOnly = on && buildOnly;
   if(!on) state.playTo=null;
-  else {state.seeking=false;state.target=state.p;state.jump=null;motionFollower.reset(state.p);}
+  else {state.seeking=false;state.target=state.p;state.jump=null;}
   $('play').classList.toggle('on', on); $('play').setAttribute('aria-pressed', String(on));
   $('play').textContent = on ? '❚❚ 정지' : '▶ 자동 재생';
   $('tourPlay').textContent = on ? '❚❚ 일시정지' : '▶ 층별 투어';
@@ -477,30 +484,15 @@ $('buildPlay').addEventListener('click', () => {
   if (state.p < P.lawEnd || state.p >= P.buildEnd) { state.p = state.target = P.lawEnd; scrollToP(P.lawEnd, false); }
   state.intro = 1; setPlaying(true, true);
 });
-const walkInput=createWalkInput();
-function walkByGesture(pixels,event){
-  if(!W)return false;
-  // Inner panels that can still scroll keep the wheel; everything else (dock, tabs, cards) drives the story.
-  // v3.9.2 let the wheel fall through over the dock, the page scrolled natively and the camera teleported.
-  if(scrollsNatively(event.target,pixels,document.body))return false;
-  event.preventDefault();
-  if(document.body.classList.contains('estOpen'))return true;   // estimate sheet open: the story stays put
-  if(state.jump){state.jump=null;state.target=state.p;motionFollower.reset(state.p);$('sceneTransition').style.opacity=0;}
-  state.direct=false;
-  const seconds=walkInput(pixels,performance.now());
-  if(seconds*(state.target-state.p)<0)motionFollower.reset(state.p);
-  const rate=progressPerSecond(state.p,W.tour.duration);
-  scrollToP(queueScrollProgress(state.p,state.target,seconds,rate),false);
-  return true;
-}
+// Wheel and touch scroll the page natively. They only stop autoplay, and keep the page still while
+// the estimate sheet is open (its own body still scrolls).
 addEventListener('wheel', e => {
   if(e.ctrlKey||e.metaKey)return;
   setPlaying(false);state.seeking=false;state.scrollSyncUntil=0;
-  if(Math.abs(e.deltaY)>=Math.abs(e.deltaX))walkByGesture(e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?innerHeight:1),e);
+  if(document.body.classList.contains('estOpen')&&!scrollsNatively(e.target,e.deltaY,document.body))e.preventDefault();
 }, { passive: false });
-let touchY=null;
-addEventListener('touchstart', e => { setPlaying(false);state.seeking=false;state.scrollSyncUntil=0;touchY=e.touches.length===1?e.touches[0].clientY:null; }, { passive: true });
-addEventListener('touchmove',e=>{if(touchY===null||e.touches.length!==1)return;const y=e.touches[0].clientY;walkByGesture((touchY-y)*2,e);touchY=y;},{passive:false});
+addEventListener('touchstart', () => { setPlaying(false);state.seeking=false;state.scrollSyncUntil=0; }, { passive: true });
+addEventListener('keydown', e => { if(/^(ArrowUp|ArrowDown|PageUp|PageDown|Home|End)$/.test(e.key)){setPlaying(false);state.scrollSyncUntil=0;} });
 document.addEventListener('visibilitychange', () => { if (document.hidden) setPlaying(false); });
 document.addEventListener('focusin', e => { if (e.target.matches('input, select, textarea')) setPlaying(false); });
 
@@ -528,7 +520,8 @@ $('estBtn').addEventListener('click', () => { setPlaying(false); document.body.c
 $('hq').classList.toggle('on', HQ);
 $('hq').addEventListener('click', () => { HQ = !HQ; $('hq').classList.toggle('on', HQ); state.dirty = true; });
 $('estClose').addEventListener('click', () => document.body.classList.remove('estOpen'));
-const tourU = p => clamp01((p - P.land) / (P.close - P.land));
+const tourV = p => clamp01((p - P.land) / (P.close - P.land));
+const tourU = p => (W?.tour ? W.tour.routeU(tourV(p)) : tourV(p));   // v4.0: scroll/autoplay progress → eased route position
 const BEATS = [
   [() => P.flat + 0.004, () => P.open - 0.004, '02 — 스캔', '그림자는 모두 45°로 그린 도면입니다. 스캔 평면이 지나가면 <em>선이 재료가 됩니다.</em>'],
   [() => P.buildEnd + 0.004, () => P.street + 0.004, '05 — 준공', '해가 움직이면 <em>그림자도 함께</em> 움직입니다.'],
@@ -542,7 +535,7 @@ const sceneCode = p => p < P.flat ? 'ELV A-201 입면' : p < P.open ? 'SCAN 스�
   : p < P.secOut ? 'SECTION A-A 단면' : p < P.cut ? 'ENTRY 입구·1층' : p < P.planHold ? 'PLAN 평면' : p < P.land ? 'DESCENT 착지' : 'TOUR 실내';
 function goStop(i) {
   const s = W.tour.stops[Math.max(0, Math.min(W.tour.stops.length - 1, i))];
-  const goal=P.land+s.u*(P.close-P.land);
+  const goal=P.land+s.v*(P.close-P.land);
   if(reducedMotion.matches){navigate(goal,false,true);return;}
   setPlaying(true);state.playTo=goal;state.intro=1;
 }
@@ -582,25 +575,17 @@ function frame(now) {
     proposed=state.p;
     if(jump.t>=.4)state.jump=null;
   }else if (state.playing) {
-    const end=state.playTo??(state.playBuildOnly?P.buildEnd:1), dir=end>=state.p?1:-1;
-    const step=dt*progressPerSecond(state.p,W.tour.duration)*(state.playTo!=null?4:1);   // 이전/다음 공간: 4배속으로 이동 후 정지
-    const next=dir>0?Math.min(end,state.p+step):Math.max(end,state.p-step);
-    proposed=next;
+    // Autoplay advances the scroll position; the camera follows it with the same response as the hand.
+    const end=state.playTo??(state.playBuildOnly?P.buildEnd:1), dir=end>=state.target?1:-1;
+    const step=dt*progressPerSecond(state.target,W.tour.playSeconds)*(state.playTo!=null?2.5:1);   // 이전/다음 공간: 2.5배속
+    scrollToP(dir>0?Math.min(end,state.target+step):Math.max(end,state.target-step),false);
+    proposed=reducedMotion.matches?state.target:followScroll(state.p,state.target,dt);
+    if(Math.abs(state.target-end)<1e-9&&Math.abs(proposed-end)<2e-4){proposed=end;setPlaying(false);}
   }else{
     $('sceneTransition').style.opacity=0;
-    proposed=reducedMotion.matches?state.target:motionFollower.step(state.p,state.target,dt);
-  }
-  if(state.direct&&Math.abs(state.target-state.p)<1e-5)state.direct=false;
-  if(!state.jump&&!state.direct&&!reducedMotion.matches){
-    const onFoot=state.p>=P.land||(state.p>=P.entry&&state.p<=P.cut),lift=state.p>=P.land&&W.tour.sample(tourU(state.p)).lift;
-    proposed=limitCameraProgress(state.p,proposed,narrativePose,motionCaps(dt,{onFoot,lift:lift?.phase==='상승'}));
+    proposed=reducedMotion.matches?state.target:followScroll(state.p,state.target,dt);
   }
   state.p=proposed;
-  if(state.playing){
-    const end=state.playTo??(state.playBuildOnly?P.buildEnd:1);
-    scrollToP(state.p,false);motionFollower.reset(state.p);
-    if(Math.abs(state.p-end)<1e-9)setPlaying(false);
-  }
   if (state.intro < 1) state.intro = Math.min(1, state.intro + dt / 2.4);             // 플로터 인트로 2.4초
   const p = state.p, T = PRJ.T, t = weekAt(p), u = tourU(p);
   if(Math.abs(p-previousP)>1e-9)state.travelDir=Math.sign(p-previousP);
@@ -838,7 +823,7 @@ function renderTour() {
   const stopY = W.tour.keys[s.i].pos[1];
   const lift=state.tourSample?.lift;
   const room = s.kind === 'elevator' ? null : W.B.rooms[s.floor||currentFloor(stopY)]?.find(r => r.id === s.room);
-  const shown=lift?{floor:currentFloor(lift.y+.1),title:`승강기 · ${lift.from} → ${lift.to}층`,desc:['상승','하강'].includes(lift.phase)?'측면 유리 너머 레일과 층 표시가 지나갑니다. 도착하면 문을 열고 다음 층 실내로 이어집니다.':`${lift.phase} · 문과 객실의 실제 위치를 따라 이동합니다.`}:s;
+  const shown=lift?{floor:currentFloor(lift.y+.1),title:`승강기 · ${lift.from} → ${lift.to}층`,desc:['상승','하강'].includes(lift.phase)?`문을 바라본 채 ${lift.to}층으로 ${lift.phase==='하강'?'내려갑니다':'올라갑니다'}. 상단 표시에 현재 층과 높이가 나옵니다. 도착하면 문이 열리고 다음 층 실내로 이어집니다.`:`${lift.phase} · 문과 객실의 실제 위치를 따라 이동합니다.`}:s;
   $('tourStop').textContent = `${String(i + 1).padStart(2, '0')} / ${String(st.length).padStart(2, '0')} · ${shown.title}`;
   $('tcard').innerHTML = tourCard(shown, i, st.length, lift?null:room);
   $('rideLift').hidden=!PRJ.T.core?.ev;

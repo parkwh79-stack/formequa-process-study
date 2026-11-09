@@ -22,9 +22,21 @@ export function camAt(p, keys, aspect) {
   const L = (x, y) => lerp(x, y, e), LL = (x, y) => Math.exp(lerp(Math.log(x), Math.log(y), e));
   const fit = k => Math.max(k.fh, (k.minW || 0) / aspect);
   const ya = a.yaw || 0, yb = ya + wrap((b.yaw || 0) - ya);              // 가까운 쪽으로 회전
-  return { t: [L(a.t[0], b.t[0]), L(a.t[1], b.t[1]), L(a.t[2], b.t[2])], fh: LL(fit(a), fit(b)), fov: LL(a.fov, b.fov),
-           yaw: L(ya, yb), pitch: L(a.pitch || 0, b.pitch || 0), viewShift: L(a.viewShift || 0, b.viewShift || 0),
-           eyeHeight: Number.isFinite(a.eyeHeight) && Number.isFinite(b.eyeHeight) ? L(a.eyeHeight, b.eyeHeight) : undefined };
+  const t = [L(a.t[0], b.t[0]), L(a.t[1], b.t[1]), L(a.t[2], b.t[2])], fh = LL(fit(a), fit(b)), fov = LL(a.fov, b.fov);
+  const both = Number.isFinite(a.eyeHeight) && Number.isFinite(b.eyeHeight);
+  let pitch = L(a.pitch || 0, b.pitch || 0);
+  // v4.0: the camera's height changes in one direction only between two keys.
+  // Interpolating pitch and a log-distance separately made the dolly zoom rise to 220 m and sink back.
+  if (!both && u > 0 && a !== b) {
+    const dist = k => fit(k) / (2 * Math.tan(k.fov * D2R / 2));
+    // absolute camera height of each key, interpolated in a log-like space (smooth for 2 m and 400 m alike)
+    const height = k => Number.isFinite(k.eyeHeight) ? k.eyeHeight : k.t[1] + dist(k) * Math.sin((k.pitch || 0) * D2R);
+    const f = h => Math.sign(h) * Math.log1p(Math.abs(h) / 3), fi = v => Math.sign(v) * 3 * Math.expm1(Math.abs(v));
+    const d = fh / (2 * Math.tan(fov * D2R / 2)), h = fi(lerp(f(height(a)), f(height(b)), e)) - t[1];
+    pitch = Math.asin(Math.max(-0.999, Math.min(Math.sin(89.5 * D2R), h / d))) / D2R;
+  }
+  return { t, fh, fov, yaw: L(ya, yb), pitch, viewShift: L(a.viewShift || 0, b.viewShift || 0),
+           eyeHeight: both ? L(a.eyeHeight, b.eyeHeight) : undefined };
 }
 
 export function setCam(camera, c) {
@@ -85,6 +97,8 @@ export function poseToKey(pos, look, fov) {
 }
 export const focalMM = fov => 12 / Math.tan(fov * D2R / 2);
 
+// Timeline: moves between spaces take 0.7× their walking time (3–45 s) and each space holds 1.4 s.
+export const LEG_SCALE = 0.7, LEG_MIN = 3, LEG_MAX = 45, HOLD_SECONDS = 1.4;
 // Room markers update the UI while playback continues through them.
 export function makeTour(keys, yOff = 0, { speed = 0.48, dwell = 0, turnSpeed = 0.22 } = {}) {
   const P = keys.map(k => new THREE.Vector3(k.pos[0], k.pos[1] + yOff, k.pos[2]));
@@ -140,5 +154,25 @@ export function makeTour(keys, yOff = 0, { speed = 0.48, dwell = 0, turnSpeed = 
     return { pos, look, lift, stopIndex: si, dwell: seg.type === 'dwell' };
   }
   const start = sample(0);
-  return { sample, stops, keys, duration: total, keyU:keySeconds.map(s=>s/total), startPos: start.pos.toArray(), startLook: start.look.toArray() };
+  // v4.0 timeline (flat-to-3d 07 / 03): scroll and autoplay move from one space to the next with an
+  // ease-in-out, then settle for a moment at the space. `routeU(v)` maps timeline progress v → route u.
+  const smoothstep = x => x * x * (3 - 2 * x);
+  const marks = [...new Set([0, ...stops.map(s => s.i), keys.length - 1])].sort((a, b) => a - b);
+  const pieces = [];
+  marks.forEach((i, n) => {
+    const r = keySeconds[i] / total;
+    if (n > 0 && keys[i].stop) pieces.push({ type: 'hold', r, w: HOLD_SECONDS });
+    const j = marks[n + 1];
+    if (j != null) { const sec = keySeconds[j] - keySeconds[i]; pieces.push({ type: 'move', r0: r, r1: keySeconds[j] / total, w: Math.min(LEG_MAX, Math.max(LEG_MIN, sec * LEG_SCALE)) }); }
+  });
+  const play = pieces.reduce((a, q) => a + q.w, 0);
+  let acc2 = 0; pieces.forEach(q => { q.v0 = acc2 / play; acc2 += q.w; q.v1 = acc2 / play; });
+  function routeU(v) {
+    v = clamp01(v);
+    const q = pieces.find(q => v <= q.v1) || pieces[pieces.length - 1];
+    if (q.type === 'hold') return q.r;
+    return q.r0 + (q.r1 - q.r0) * smoothstep(span(v, q.v0, q.v1));
+  }
+  stops.forEach(s => { const h = pieces.find(q => q.type === 'hold' && Math.abs(q.r - s.u0) < 1e-9); s.v = h ? h.v1 : (pieces.find(q => q.type === 'move' && Math.abs(q.r1 - s.u0) < 1e-9)?.v1 ?? 0); });
+  return { sample, stops, keys, duration: total, playSeconds: play, routeU, keyU:keySeconds.map(s=>s/total), startPos: start.pos.toArray(), startLook: start.look.toArray() };
 }

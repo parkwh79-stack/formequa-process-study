@@ -1,11 +1,12 @@
+// v4.0: construction-arc yaw angles sweep one way only (no back-and-forth orbit).
 // World-space camera routes. Eye heights, doors and lift coordinates follow the scaled model.
 export const EYE_HEIGHT = 1.6;
 const PROFILES = {
-  office: { name: '로비 → 승강기 → 기준층·상층', speed: 1.1, fov: 56, yaw: [-32,-24,-8,14,34,26,8,-10] },
-  neighborhood: { name: '카페 → 승강기 → 기준층·상층', speed: 1.05, fov: 54, yaw: [-36,-26,-12,8,28,18,4,-12] },
-  dormitory: { name: '현관 → 승강기 → 공용층·객실층', speed: 1, fov: 56, yaw: [32,24,10,-12,-30,-18,-4,12] },
-  dasedae: { name: '현관 → 승강기 → 세대·상층', speed: 0.98, fov: 54, yaw: [-30,-20,-4,18,32,20,4,-12] },
-  house: { name: '정원 → 거실 → 계단 → 2층', speed: 0.98, fov: 52, yaw: [-40,-28,-12,10,30,18,-6,-20] },
+  office: { name: '로비 → 승강기 → 기준층·상층', speed: 1.1, fov: 56, yaw: [-34,-27,-20,-13,-6,1,8,14] },
+  neighborhood: { name: '카페 → 승강기 → 기준층·상층', speed: 1.05, fov: 54, yaw: [-36,-29,-22,-15,-8,-1,6,12] },
+  dormitory: { name: '현관 → 승강기 → 공용층·객실층', speed: 1, fov: 56, yaw: [34,27,20,13,6,-1,-8,-14] },
+  dasedae: { name: '현관 → 승강기 → 세대·상층', speed: 0.98, fov: 54, yaw: [-32,-25,-18,-11,-4,3,9,14] },
+  house: { name: '정원 → 거실 → 계단 → 2층', speed: 0.98, fov: 52, yaw: [-40,-32,-24,-16,-8,0,8,14] },
 };
 export const motionProfile = T => PROFILES[T.use] || PROFILES.neighborhood;
 export const levelY = (T, n) => (T.structure === 'timber' ? 0.3 : 0) + (n <= 1 ? 0 : T.f1 + (n - 2) * T.ft);
@@ -47,18 +48,20 @@ export function elevatorLeg(T, from = 1, to = 2) {
   const a = levelY(T, from), b = levelY(T, to);
   const lift = (y, door, phase) => ({ y, door, from, to, phase });
   const front=[x,a+EYE_HEIGHT,z1+Math.min(2.5,T.core.z1-z1-.3)], inside=[x,a+EYE_HEIGHT,z];
-  const view = y => [x0-1,y+EYE_HEIGHT-0.12,z+0.1];
   const c=T.core, hallZ=T.use==='dormitory'?c.z1-.35:(c.doorEast?midpoint(c.doorEast):-1.55);
   const hall=[x,b+EYE_HEIGHT,hallZ], hallLook=T.use==='dormitory'?[midpoint(c.frontDoor),b+EYE_HEIGHT,c.z1+2]:[c.x1+2,b+EYE_HEIGHT,hallZ];
+  // v4.0: one clear ride. Face the door, it opens, step in while turning round to face it again,
+  // the door closes, rise straight up facing the door (floor read-out in the HUD), it opens, step out.
+  // The v3.8 side-window turn and the long waits were removed.
+  const door = y => [x + 0.35, y + EYE_HEIGHT - 0.05, z1 + 3];
   return [
-    pose(front,[x,a+EYE_HEIGHT+.25,z0],{hold:1.2,lift:lift(a,0,'호출')}),
-    pose(front,[x,a+EYE_HEIGHT+.25,z0],{hold:2.4,lift:lift(a,1,'문 열림')}),
-    pose(inside,[x,a+EYE_HEIGHT,z0],{speed:0.7,lift:lift(a,1,'탑승')}),
-    pose(inside,view(a),{hold:2.8,turnSpeed:0.3,lift:lift(a,1,'탑승')}),
-    pose(inside,view(a),{hold:2.4,lift:lift(a,0,'문 닫힘')}),
-    pose([x,b+EYE_HEIGHT,z],view(b),{speed:0.85,lift:lift(b,0,'상승')}),
-    pose([x,b+EYE_HEIGHT,z],[x,b+EYE_HEIGHT,z1+3],{hold:3,turnSpeed:0.3,lift:lift(b,0,'도착')}),
-    pose([x,b+EYE_HEIGHT,z],[x,b+EYE_HEIGHT,z1+3],{hold:2.6,lift:lift(b,1,'문 열림')}),
+    pose(front,[x,a+EYE_HEIGHT+.15,z0],{hold:0.6,lift:lift(a,0,'호출')}),
+    pose(front,[x,a+EYE_HEIGHT+.15,z0],{hold:1.0,lift:lift(a,1,'문 열림')}),
+    pose(inside,door(a),{speed:0.7,turnSpeed:0.3,lift:lift(a,1,'탑승')}),
+    pose(inside,door(a),{hold:0.8,lift:lift(a,0,'문 닫힘')}),
+    pose([x,b+EYE_HEIGHT,z],door(b),{speed:0.85,lift:lift(b,0,'상승')}),
+    pose([x,b+EYE_HEIGHT,z],door(b),{hold:0.5,lift:lift(b,0,'도착')}),
+    pose([x,b+EYE_HEIGHT,z],door(b),{hold:0.9,lift:lift(b,1,'문 열림')}),
     pose([x,b+EYE_HEIGHT,z1+0.7],[x,b+EYE_HEIGHT,hallZ],{speed:0.7,lift:lift(b,1,'하차')}),
     pose(hall,hallLook,{speed:0.8,
       stop:{kind:'elevator',floor:to,room:'core2',title:`${to}층 도착 · 승강기`,desc:`${from}층에서 ${to}층으로 이동했습니다. 문을 나와 이 층의 실내를 살펴봅니다.`,reveal:['core2']}}),
