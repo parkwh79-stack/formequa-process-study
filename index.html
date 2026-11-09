@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4.0.0">
+<link rel="stylesheet" href="style.css?v=4.1.0">
 <!-- 오류가 나면 화면에 바로 보여 준다 (모듈 로딩 실패·file:// 실행 등 진단용) -->
 <script>
 (function () {
@@ -26,23 +26,23 @@
 { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
-    "./js/types.js": "./js/types.js?v=4.0.0",
-    "./js/project.js": "./js/project.js?v=4.0.0",
-    "./js/law.js": "./js/law.js?v=4.0.0",
-    "./js/parking.js": "./js/parking.js?v=4.0.0",
-    "./js/camera.js": "./js/camera.js?v=4.0.0",
-    "./js/walkthrough.js": "./js/walkthrough.js?v=4.0.0",
-    "./js/story.js": "./js/story.js?v=4.0.0",
-    "./js/kit.js": "./js/kit.js?v=4.0.0",
-    "./js/building.js": "./js/building.js?v=4.0.0",
-    "./js/interior.js": "./js/interior.js?v=4.0.0",
-    "./js/textures.js": "./js/textures.js?v=4.0.0",
-    "./js/sun.js": "./js/sun.js?v=4.0.0",
-    "./js/ui.js": "./js/ui.js?v=4.0.0",
-    "./js/elevator.js": "./js/elevator.js?v=4.0.0",
-    "./js/scroll-motion.js": "./js/scroll-motion.js?v=4.0.0",
-    "./js/access.js": "./js/access.js?v=4.0.0",
-    "./js/rect-patches.js": "./js/rect-patches.js?v=4.0.0"
+    "./js/types.js": "./js/types.js?v=4.1.0",
+    "./js/project.js": "./js/project.js?v=4.1.0",
+    "./js/law.js": "./js/law.js?v=4.1.0",
+    "./js/parking.js": "./js/parking.js?v=4.1.0",
+    "./js/camera.js": "./js/camera.js?v=4.1.0",
+    "./js/walkthrough.js": "./js/walkthrough.js?v=4.1.0",
+    "./js/story.js": "./js/story.js?v=4.1.0",
+    "./js/kit.js": "./js/kit.js?v=4.1.0",
+    "./js/building.js": "./js/building.js?v=4.1.0",
+    "./js/interior.js": "./js/interior.js?v=4.1.0",
+    "./js/textures.js": "./js/textures.js?v=4.1.0",
+    "./js/sun.js": "./js/sun.js?v=4.1.0",
+    "./js/ui.js": "./js/ui.js?v=4.1.0",
+    "./js/elevator.js": "./js/elevator.js?v=4.1.0",
+    "./js/scroll-motion.js": "./js/scroll-motion.js?v=4.1.0",
+    "./js/access.js": "./js/access.js?v=4.1.0",
+    "./js/rect-patches.js": "./js/rect-patches.js?v=4.1.0"
 } }
 </script>
 </head>
@@ -63,7 +63,6 @@
   <div class="studyToolbar">
   <nav class="types" aria-label="건물 유형">
     <button data-type="midsize">중소형 빌딩</button>
-    <button data-type="geunsaeng">근생 빌딩</button>
     <button data-type="dasedae">다세대주택</button>
     <button data-type="dormitory">임대형기숙사</button>
     <button data-type="jeonwon">전원주택</button>
@@ -130,16 +129,23 @@
   <button data-hour="20">야간</button>
 </div>
 
-<!-- 실내 투어: 정지점 카드 · 이전/다음 · 미니 평면 -->
+<!-- v4.1 실내 투어: 기본은 공간만 보입니다. 설명은 서랍(글래스모피즘) — 사진 헤더 + 설명 헤더 -->
 <section class="tour">
-  <div class="tourHead"><output id="tourStop">실내 투어</output><button id="tourToggle" aria-expanded="true" aria-controls="tourDetails radar">공간만 보기 ↗</button></div>
-  <div class="tourActions"><button id="tourPlay" aria-pressed="false">▶ 층별 투어</button><button id="rideLift">승강기 타기 ↑</button></div>
-  <div id="tourDetails">
-    <div class="stabs" id="stabs" aria-label="실내 공간"></div>
-    <div class="tcard" id="tcard"></div>
+  <div class="tourBar glass">
+    <button id="tprev" aria-label="이전 공간">←</button>
+    <output id="tourStop">실내 투어</output>
+    <button id="tnext">다음 →</button>
+    <button id="tourPlay" aria-pressed="false">▶ 층별 투어</button>
+    <button id="tourToggle" aria-expanded="false" aria-controls="tourDetails">설명 ▸</button>
   </div>
-  <div class="tnav"><button id="tprev">← 이전</button><div class="tdots" id="tdots"></div><button id="tnext">다음 →</button></div>
 </section>
+<aside class="tourDrawer glass" id="tourDetails" hidden aria-label="공간 설명">
+  <figure class="tdPhoto"><img id="tdImg" alt=""><figcaption id="tdCap">PHOTO</figcaption></figure>
+  <div class="tcard" id="tcard"></div>
+  <div class="tdActions"><button id="rideLift">승강기 타기 ↑</button><button id="tdClose">설명 닫기 ✕</button></div>
+  <div class="stabs" id="stabs" aria-label="실내 공간"></div>
+  <div class="tdots" id="tdots"></div>
+</aside>
 <div class="radar" id="radar"></div>
 <aside class="liftStatus" id="liftStatus" hidden aria-live="polite"></aside>
 
@@ -168,6 +174,6 @@
 <div class="err" id="err"><b>실행 중 문제가 생겼습니다</b><pre></pre><small>이 내용을 캡처해 알려 주시면 원인을 바로 찾을 수 있습니다.</small></div>
 
 <i class="mk tl"></i><i class="mk tr"></i><i class="mk bl"></i><i class="mk br"></i>
-<script type="module" src="js/main.js?v=4.0.0"></script>
+<script type="module" src="js/main.js?v=4.1.0"></script>
 </body>
 </html>

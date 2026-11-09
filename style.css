@@ -13,7 +13,7 @@
 html, body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); }
 html.fixed { overflow: hidden; }
 #gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
-.track { height: 2400vh; }   /* v4.0: native scroll — longer track, closer to flat-to-3d pacing */
+.track { height: 2000vh; }   /* v4.1: native scroll; shorter de-duplicated tour */
 #sceneTransition { position:fixed;inset:0;z-index:3;background:var(--paper);opacity:0;pointer-events:none; }
 button { font-family: var(--sans); cursor: pointer; }
 
@@ -417,3 +417,43 @@ body.walking .tourHead output::after { content: ' · 이동 중'; color: var(--a
 
 /* v3.9.3 — inner panels keep their own wheel; never chain into the page scroll that drives the camera */
 .estBody, .closing, .tour .stabs { overscroll-behavior: contain; }
+
+/* ── v4.1 실내 투어: 공간만 보기(기본) + 설명 서랍 · 글래스모피즘 ───────────────────── */
+.glass { background: rgba(250,248,243,.5); -webkit-backdrop-filter: blur(20px) saturate(1.5); backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid rgba(255,255,255,.62); border-radius: 12px; box-shadow: 0 18px 50px rgba(36,38,34,.16), inset 0 1px 0 rgba(255,255,255,.7); }
+.tour { width: min(560px, calc(100vw - 2 * var(--g))); }
+.tourBar { display: flex; align-items: center; gap: 6px; padding: 6px; }
+.tourBar output { flex: 1; min-width: 0; padding: 0 6px; font: 600 11.5px/1.4 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tourBar button { flex: none; min-height: 34px; padding: 7px 10px; font: 500 11px var(--sans); color: var(--ink); background: rgba(255,255,255,.42); border: 1px solid rgba(36,38,34,.14); border-radius: 8px; white-space: nowrap; }
+.tourBar button:hover { background: rgba(255,255,255,.7); }
+.tourBar button:disabled { opacity: .35; }
+.tourBar #tnext { max-width: 32%; overflow: hidden; text-overflow: ellipsis; background: rgba(36,38,34,.86); color: var(--paper); border-color: transparent; margin: 0; }
+.tourBar #tourToggle[aria-expanded="false"] { box-shadow: 0 0 0 2px rgba(180,83,9,.35); }
+.tourDrawer { position: fixed; left: var(--g); top: calc(var(--headerH) + 70px); bottom: 84px; z-index: 6; width: min(400px, calc(100vw - 2 * var(--g)));
+  display: flex; flex-direction: column; gap: 10px; padding: 10px; overflow-y: auto; overscroll-behavior: contain; opacity: var(--tour); pointer-events: none;
+  animation: drawerIn .32s ease both; }
+body.tourOn .tourDrawer { pointer-events: auto; }
+@keyframes drawerIn { from { opacity: 0; transform: translateX(-14px); } to { opacity: var(--tour); transform: none; } }
+.tdPhoto { position: relative; flex: none; margin: 0; aspect-ratio: 16 / 10; max-width: 100%; overflow: hidden; border-radius: 9px;
+  background: linear-gradient(135deg, rgba(112,121,96,.32), rgba(180,83,9,.16)); }
+.tdPhoto img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tdPhoto img:not([src]) { visibility: hidden; }
+.tdPhoto figcaption { position: absolute; inset: auto 0 0 0; padding: 22px 12px 9px; font: 500 10px var(--mono); letter-spacing: .08em; color: #fff;
+  background: linear-gradient(transparent, rgba(20,20,18,.58)); }
+.tourDrawer .tcard { background: transparent; border: 0; box-shadow: none; padding: 0 4px; }
+.tourDrawer .tcard h4 { margin-top: 4px; }
+.tdActions { display: flex; gap: 6px; }
+.tdActions button { flex: 1; min-height: 34px; font: 500 11px var(--sans); color: var(--ink); background: rgba(255,255,255,.45); border: 1px solid rgba(36,38,34,.14); border-radius: 8px; }
+.tdActions button[hidden] { display: none; }
+.tourDrawer .stabs { margin: 0; max-height: none; }
+.tourDrawer .stabs button { border-radius: 6px; background: rgba(255,255,255,.4); }
+.tourDrawer .stabs button.on { background: var(--ink); color: var(--paper); }
+.tourDrawer .tdots { display: none; }
+@media (max-width: 760px) {
+  .tourBar { flex-wrap: wrap; }
+  .tourBar output { flex-basis: 100%; order: -1; padding: 2px 6px; }
+  .tourBar #tnext { max-width: none; flex: 1; }
+  .tourDrawer { top: auto; right: var(--g); bottom: 112px; width: auto; max-height: 58vh; animation-name: sheetIn; }
+  @keyframes sheetIn { from { opacity: 0; transform: translateY(14px); } to { opacity: var(--tour); transform: none; } }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass { background: rgba(250,248,243,.94); } }
