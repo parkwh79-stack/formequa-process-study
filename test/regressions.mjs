@@ -38,7 +38,7 @@ loadType('jeonwon', { auto: true });
 near(areas().gfa, PRJ.fit.m.gfa, 'scaled house extension area');
 near((PRJ.T.wing.x1 - PRJ.T.wing.x0) * PRJ.T.wing.depth, PRJ.T.wingArea, 'wing footprint matches ledger');
 
-loadType('geunsaeng');
+loadType('midsize');
 const beforeMep = PRJ.PHASES.find(p => p.key === 'mep').w1;
 const beforeFinish = PRJ.WEEKS;
 PRJ.opts.delayKey = 'mep'; PRJ.opts.delayWeeks = 8; recompute();

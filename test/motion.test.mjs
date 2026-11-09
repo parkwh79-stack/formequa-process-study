@@ -44,7 +44,7 @@ for(const dt of [1/60,.1,.25])for(const kind of ['turn','walk','lens']){
   assert.ok(nearEnd<1e-5,`${kind}: camera settles without a long queued movement`);
 }
 
-for(const type of ['midsize','geunsaeng'])for(const scale of [.8,.9,1,1.2]){
+for(const type of ['midsize'])for(const scale of [.8,.9,1,1.2]){
   const T=resolveEntrances(scaleType(TYPES[type],scale,TYPES[type].floors,TYPES[type].law));
   const hd=T.D/2,x=T.frontDoors[0],profile=motionProfile(T),grid=columnAxes(T);
   const approach=entranceApproach(T,T.tour[0].pos[2]),path=makeTour(approach,0,{speed:profile.speed});
@@ -122,3 +122,22 @@ for(const type of Object.keys(TYPES)){
   for(let i=0;i<=20000;i++){const q=tour.sample(i/20000);if(q.lift?.phase==='상승'){const d=q.look.clone().sub(q.pos).normalize();if(rideDir)assert.ok(angle(rideDir,d)<1e-6,`${type}: rides facing one way`);rideDir=d;}else rideDir=null;}
 }
 console.log('PASS: v4.0 monotonic camera height, eased timeline with holds, lift ride faces the door.');
+
+// v4.1: no repeated typical floors, emphasis pacing, legal parking met by design
+import { PRJ, loadType } from '../js/project.js';
+import { visitFloors } from '../js/walkthrough.js';
+for(const type of Object.keys(TYPES)){
+  loadType(type);const T=PRJ.T,tour=makeTour(buildWalkthrough(T),0,{speed:motionProfile(T).speed});
+  if(T.core?.ev){
+    assert.deepEqual(visitFloors(T),[1,T.floors],`${type}: lift goes straight to the top floor`);
+    const floors=new Set(tour.stops.map(s=>s.floor).filter(Boolean));
+    assert.ok([...floors].every(n=>n===1||n===T.floors||n===undefined),`${type}: no repeated typical floors (${[...floors]})`);
+    const titles=tour.stops.filter(s=>s.floor===T.floors&&s.kind!=='elevator').map(s=>s.title.replace(/^\d+층 · /,''));
+    assert.equal(new Set(titles).size,titles.length,`${type}: each space of the typical floor is visited once`);
+  }
+  assert.ok(tour.stops.some(s=>s.emphasis),`${type}: has at least one emphasised space`);
+  const park=PRJ.fit.rows.find(r=>r.k==='park');
+  assert.ok(park.ok===true&&!park.advisory,`${type}: legal parking is met as a hard condition (${park.plan}/${park.max})`);
+  if(PRJ.park.L.kind==='mech')assert.ok(T.basementLevels>=1&&PRJ.park.L.provided>=PRJ.park.R.req,`${type}: basement levels cover the requirement`);
+}
+console.log('PASS: v4.1 single typical floor, emphasis pacing, parking met by design.');

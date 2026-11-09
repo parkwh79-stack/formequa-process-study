@@ -30,11 +30,13 @@ const near = (a, b, message) => assert.ok(Math.abs(a - b) < 1e-6, `${message}: $
 const area = r => (r[2] - r[0]) * (r[3] - r[1]);
 const overlap = (a,b) => Math.max(0,Math.min(a[2],b[2])-Math.max(a[0],b[0])) * Math.max(0,Math.min(a[3],b[3])-Math.max(a[1],b[1]));
 near(finishPatches([0,0,10,10], [[2,2,4,4],[6,6,8,8]]).reduce((sum,r)=>sum+area(r),0),92,'multiple shaft area conservation');
-assert.equal(Object.keys(TYPES).length, 5);
+assert.equal(Object.keys(TYPES).length, 4);
+assert.equal(TYPES.geunsaeng, undefined, 'neighbourhood building merged into mid-size (v4.1)');
 assert.equal(TYPES.dagagu, undefined);
 loadType('dagagu'); assert.equal(PRJ.key, 'dasedae', 'old bookmark uses retained type');
+loadType('geunsaeng'); assert.equal(PRJ.key, 'midsize', 'old neighbourhood bookmark opens the mid-size building');
 for(let p=0;p<=1;p+=.001)near(scrollToStory(storyToScroll(p)),p,'scroll and story mapping are reversible');
-near(storyToScroll(P.close)-storyToScroll(P.land),.6,'60% of scroll track belongs to interior');
+near(storyToScroll(P.close)-storyToScroll(P.land),.48,'48% of scroll track belongs to interior (v4.1)');
 const wheel=createWalkInput();let walked=0;
 for(let ms=0;ms<=5000;ms+=16)walked+=wheel(1000,ms);
 assert.ok(walked>30&&walked<=31.6,'sustained wheel input runs at about 6x route time while keeping a bounded budget');
@@ -43,7 +45,7 @@ assert.ok(wheel(-1000,5500)<0,'reverse scroll reverses walking');
 let frontSeconds=0;
 for(let i=0;i<9;i++){const a=[0,P.flat,P.open,P.lawEnd,P.buildEnd,P.street,P.secOut,P.cut,P.planHold][i];const b=[P.flat,P.open,P.lawEnd,P.buildEnd,P.street,P.secOut,P.cut,P.planHold,P.land][i];frontSeconds+=(b-a)/progressPerSecond(a);}
 assert.ok(frontSeconds<=80,'front sequence has a shorter explicit rhythm');
-for(const key of ['midsize','geunsaeng'])for(const scale of [.8,.9,1,1.2]){
+for(const key of ['midsize'])for(const scale of [.8,.9,1,1.2]){
   const T=resolveEntrances(scaleType(TYPES[key],scale,TYPES[key].floors,TYPES[key].law));
   const grid=columnAxes(T);
   for(const door of T.frontDoors)for(const col of grid.xs)assert.ok(Math.abs(door-col)>ENTRANCE_WIDTH/2+grid.width/2+.2,`${key}: doorway and column clearance at ${scale}`);
