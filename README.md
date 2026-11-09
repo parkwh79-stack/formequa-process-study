@@ -69,7 +69,7 @@ Samnang Aing의 [flat-to-3d](https://github.com/Sam1983Aing/flat-to-3d)(MIT)와 
 
 ## 디버그 주소
 
-`?type=midsize|dasedae|dormitory|jeonwon` 유형 (기본 midsize, 예전 `geunsaeng` 주소는 midsize로 연결) · `?mobile` / `?desktop` 모바일 화면 강제(모바일은 자동 재생 + 짧은 유리 설명) · `?est` 산정 패널 열기 · `?p=0.13` (법규 장면) · `?p=0.58` (단면) · `?p=0.65` (입구·1층) · `?p=0.73` (평면도) · `?p=0.85` (실내) · `?q=low` (저사양) · `?p=0.995` (마무리) · `?hour=20` 시각 · `?nointro` 인트로 끄기
+`?type=midsize|dasedae|dormitory|jeonwon` 유형 (기본 midsize, 예전 `geunsaeng` 주소는 midsize로 연결) · `?mobile` / `?tablet` / `?desktop` 화면 강제(휴대폰은 자동 재생 + 짧은 유리 설명, 패드·탭은 PC에 가까운 화면 + 자동 재생 + 큰 공정표) · `?est` 산정 패널 열기 · `?p=0.13` (법규 장면) · `?p=0.58` (단면) · `?p=0.65` (입구·1층) · `?p=0.73` (평면도) · `?p=0.85` (실내) · `?q=low` (저사양) · `?p=0.995` (마무리) · `?hour=20` 시각 · `?nointro` 인트로 끄기
 법규 엔진 단위 점검: `node test/fit.mjs`
 수량·자금·지연·좌표 회귀 점검: `node test/regressions.mjs`
 카메라·승강기·샤프트 개구부 점검: `node test/camera.test.mjs` (브라우저와 같은 three.js 빌드 경로는 테스트 파일 참고)

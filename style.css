@@ -489,3 +489,27 @@ body.mobile .mIntro:not([hidden]) { display: flex; flex-direction: column; gap: 
 .mIntro button { margin-top: 6px; min-height: 46px; font: 600 14px var(--sans); color: var(--paper); background: var(--ink); border: 0; border-radius: 10px; }
 .mIntro button span { opacity: .6; margin-left: 6px; }
 body.mobile .closing { max-height: calc(100vh - 140px); }
+
+/* ── v4.3 패드·탭: PC에 가까운 화면 + 자동 재생, 손가락 크기 조작, 크게 보이는 공정표 ───────── */
+html.tablet { --dockH: 330px; }
+body.tablet .mIntro:not([hidden]) { display: flex; flex-direction: column; gap: 12px; position: fixed; left: 50%; top: 50%; translate: -50% -50%; z-index: 9;
+  width: min(460px, calc(100vw - 48px)); padding: 26px 26px 22px; }
+body.tablet .mIntro h2 { font-size: 42px; }
+body.tablet .mIntro p { font-size: 14.5px; }
+body.tablet :is(.studyToolbar button, .types button, .jumps a, .jumps button, .tod button, .journey button, .tourBar button, .tdActions button, .buildScrub button) { min-height: 42px; }
+body.tablet .stabs button { min-height: 36px; padding: 6px 10px; font-size: 12px; }
+body.tablet .dock { grid-template-rows: 40px minmax(0, 1fr); padding-top: 12px; }
+body.tablet .buildScrub label { font-size: 13px; }
+body.tablet .buildScrub output { font-size: 13px; }
+body.tablet .buildScrub input { height: 28px; }
+body.tablet .finNums { font-size: 12.5px; }
+body.tablet .lawcard { width: min(400px, 46vw); font-size: 13.5px; }
+body.tablet .beat { font-size: 1.08em; }
+body.tablet .tcard p { font-size: 14px; }
+body.tablet .tourDrawer { width: min(420px, 46vw); }
+@media (orientation: portrait) {
+  html.tablet { --dockH: 300px; }
+  body.tablet .dock { grid-template-columns: 1fr; }
+  body.tablet .fin { display: none; }       /* 세로: 공정표를 화면 폭 가득 */
+  body.tablet .readout { display: none; }
+}
