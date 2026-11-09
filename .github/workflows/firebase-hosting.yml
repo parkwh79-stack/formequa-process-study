@@ -36,9 +36,12 @@ jobs:
         continue-on-error: true
         timeout-minutes: 10
         run: |
-          npm i --no-save --ignore-scripts playwright@1.48.2
-          npx playwright install --with-deps chromium
-          node scripts/og-image.mjs
+          npm i --no-save --ignore-scripts playwright-core@1.55.0
+          OG_CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$OG_CHROME" ]; then npx playwright-core install chromium; fi
+          echo "Chrome: ${OG_CHROME:-playwright chromium}"
+          OG_CHROME="$OG_CHROME" node scripts/og-image.mjs || echo "::warning::og-image.png was not generated"
+          ls -la dist/og-image.png || true
 
       - name: Preview channel (pull request)
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
