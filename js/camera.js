@@ -64,8 +64,18 @@ export function limitCameraProgress(current,next,sample,{angle=Infinity,distance
   }
   if(fits(next))return next;
   let lo=0,hi=1;
-  for(let i=0;i<14;i++){const mid=(lo+hi)/2;if(fits(current+(next-current)*mid))lo=mid;else hi=mid;}
-  return current+(next-current)*lo;
+  for(let i=0;i<24;i++){const mid=(lo+hi)/2;if(fits(current+(next-current)*mid))lo=mid;else hi=mid;}
+  // An authored cut (scene change, teleport between path pieces) cannot be crossed by any small step.
+  // v3.9.2 stopped the camera in front of such a cut forever; now it passes through it.
+  const a=current+(next-current)*lo,b=current+(next-current)*hi;
+  if(Math.abs(b-a)<1e-6){
+    const pa=sample(a),pb=sample(b);
+    const da=pa.look.clone().sub(pa.pos).normalize(),db=pb.look.clone().sub(pb.pos).normalize();
+    const jump=Math.acos(Math.max(-1,Math.min(1,da.dot(db))))>1*D2R||pa.pos.distanceTo(pb.pos)>.25
+      ||Math.abs(Math.log(Math.tan(pb.fov*D2R/2)/Math.tan(pa.fov*D2R/2)))>.03;
+    if(jump)return b;
+  }
+  return a;
 }
 // 위치·시선 → 프레임 키 (투어 첫 장면을 돌리 줌의 도착점으로 쓰기 위해)
 export function poseToKey(pos, look, fov) {
@@ -75,8 +85,8 @@ export function poseToKey(pos, look, fov) {
 }
 export const focalMM = fov => 12 / Math.tan(fov * D2R / 2);
 
-// ② 투어: 키 사이 이동(거리 비례) + 정지점 체류. sample(u) → 위치·시선·현재 정지점
-export function makeTour(keys, yOff = 0, { speed = 0.48, dwell = 6, turnSpeed = 0.22 } = {}) {
+// Room markers update the UI while playback continues through them.
+export function makeTour(keys, yOff = 0, { speed = 0.48, dwell = 0, turnSpeed = 0.22 } = {}) {
   const P = keys.map(k => new THREE.Vector3(k.pos[0], k.pos[1] + yOff, k.pos[2]));
   const yaw = [], pitch = [];
   keys.forEach((k, i) => {
@@ -90,21 +100,24 @@ export function makeTour(keys, yOff = 0, { speed = 0.48, dwell = 6, turnSpeed = 
     Math.abs(yaw[i + 1] - yaw[i]) * 1.875 / (keys[i+1].turnSpeed || turnSpeed)));
   // Monotone Hermite tangents: continuous walking through waypoints, no spline overshoot through walls.
   const tangent = (i, axis) => {
-    if (i === 0 || i === keys.length - 1 || keys[i].stop || keys[i].hold) return 0;
+    if (i === 0 || i === keys.length - 1 || (keys[i].dwell ?? dwell)>0 || keys[i].hold) return 0;
     const a = (P[i][axis] - P[i - 1][axis]) / moveSeconds[i - 1];
     const b = (P[i + 1][axis] - P[i][axis]) / moveSeconds[i];
     return a * b > 0 ? 2 * a * b / (a + b) : 0;
   };
   const tangents = P.map((p, i) => new THREE.Vector3(tangent(i, 'x'), tangent(i, 'y'), tangent(i, 'z')));
-  const segs = [];
+  const segs = [], keySeconds=[];
+  let elapsed=0;
   keys.forEach((k, i) => {
-    if (k.stop) segs.push({ type: 'dwell', i, w: k.dwell || dwell });
-    if (i < keys.length - 1) segs.push({ type: 'move', i, w: moveSeconds[i] });
+    keySeconds[i]=elapsed;
+    const pause=k.stop?Math.max(0,k.dwell ?? dwell):0;
+    if (pause>0){segs.push({type:'dwell',i,w:pause});elapsed+=pause;}
+    if (i < keys.length - 1){segs.push({ type: 'move', i, w: moveSeconds[i] });elapsed+=moveSeconds[i];}
   });
   const total = segs.reduce((a, s) => a + s.w, 0);
   let acc = 0; segs.forEach(s => { s.u0 = acc / total; acc += s.w; s.u1 = acc / total; });
   const stops = keys.map((k, i) => ({ ...k.stop, i })).filter(s => s.title);
-  stops.forEach(s => { const d = segs.find(g => g.type === 'dwell' && g.i === s.i); s.u = (d.u0 + d.u1) / 2; s.u0 = d.u0; });
+  stops.forEach(s => { const d = segs.find(g => g.type === 'dwell' && g.i === s.i); s.u0=keySeconds[s.i]/total;s.u=d?(d.u0+d.u1)/2:s.u0; });
   function sample(u) {
     u = clamp01(u);
     let seg = segs[segs.length - 1];
@@ -127,9 +140,5 @@ export function makeTour(keys, yOff = 0, { speed = 0.48, dwell = 6, turnSpeed = 
     return { pos, look, lift, stopIndex: si, dwell: seg.type === 'dwell' };
   }
   const start = sample(0);
-  function skipDwell(u,direction){
-    const seg=segs.find(s=>s.type==='dwell'&&u>=s.u0-1e-10&&u<=s.u1+1e-10);
-    return seg?(direction>0?seg.u1:seg.u0):u;
-  }
-  return { sample, skipDwell, stops, keys, duration: total, keyU: keys.map((_,i)=>segs.find(s=>s.i===i)?.u0??1), startPos: start.pos.toArray(), startLook: start.look.toArray() };
+  return { sample, stops, keys, duration: total, keyU:keySeconds.map(s=>s/total), startPos: start.pos.toArray(), startLook: start.look.toArray() };
 }

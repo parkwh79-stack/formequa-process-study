@@ -31,7 +31,7 @@ export function groundVisit(T) {
     const destination = pose([inside.pos[0], inside.pos[1] + off, inside.pos[2]], [inside.look[0], inside.look[1] + off, inside.look[2]]);
     const threshold = pose([x,eye,hd-0.85],[x,eye-0.08,hd-3]);
     const approach=T.frontDoors?.length?entranceApproach(T):[outside,door,threshold];
-    return [...approach, destination, { ...destination, hold: 1.4 }];
+    return [...approach, destination];
   }
   const core = T.core, door = core.frontDoor1 || core.frontDoor;
   const x = midpoint(door), z = core.z1;
@@ -39,7 +39,6 @@ export function groundVisit(T) {
     pose([x, eye, hd + 2.5], [x, eye - 0.05, z]),
     pose([x, eye, z + 1.1], [x, eye - 0.05, z - 1]),
     pose([x, eye, z - 0.3], [(core.ev[0] + core.ev[2]) / 2, eye - 0.05, core.ev[3]]),
-    pose([x, eye, z - 0.3], [(core.ev[0] + core.ev[2]) / 2, eye - 0.05, core.ev[3]], { hold: 2.2 }),
   ];
 }
 
@@ -61,8 +60,7 @@ export function elevatorLeg(T, from = 1, to = 2) {
     pose([x,b+EYE_HEIGHT,z],[x,b+EYE_HEIGHT,z1+3],{hold:3,turnSpeed:0.3,lift:lift(b,0,'도착')}),
     pose([x,b+EYE_HEIGHT,z],[x,b+EYE_HEIGHT,z1+3],{hold:2.6,lift:lift(b,1,'문 열림')}),
     pose([x,b+EYE_HEIGHT,z1+0.7],[x,b+EYE_HEIGHT,hallZ],{speed:0.7,lift:lift(b,1,'하차')}),
-    pose(hall,hallLook,{speed:0.8,lift:lift(b,1,'하차')}),
-    pose(hall,hallLook,{dwell:4,
+    pose(hall,hallLook,{speed:0.8,
       stop:{kind:'elevator',floor:to,room:'core2',title:`${to}층 도착 · 승강기`,desc:`${from}층에서 ${to}층으로 이동했습니다. 문을 나와 이 층의 실내를 살펴봅니다.`,reveal:['core2']}}),
   ];
 }
@@ -73,7 +71,7 @@ export function buildWalkthrough(T) {
   const original = T.tour.map(k => ({ ...k, pos: [k.pos[0], k.pos[1] + off, k.pos[2]], look: [k.look[0], k.look[1] + off, k.look[2]] }));
   if (!T.core?.ev || T.floors < 2) return original.map(k=>{
     let floor=1;for(let n=2;n<=T.floors;n++)if(k.pos[1]>=levelY(T,n)+EYE_HEIGHT-.2)floor=n;
-    return {...k,floor,dwell:k.stop?2:undefined,stop:k.stop?{...k.stop,floor}:undefined};
+    return {...k,floor,stop:k.stop?{...k.stop,floor}:undefined};
   });
   const c = T.core, cx = (c.ev[0] + c.ev[2]) / 2, doorZ = c.doorEast ? midpoint(c.doorEast) : -1.55;
   const commercial=T.planFloor===1, fd=midpoint(c.frontDoor1||c.frontDoor||[0,0]);
@@ -85,7 +83,7 @@ export function buildWalkthrough(T) {
     const first=initial[0],approach=entranceApproach(T,first.pos[2]);
     initial.splice(0,1,...approach.map((k,i)=>({...k,...(i===0?{stop:first.stop}:{})})));
   }
-  const tag=(k,n)=>({...k,floor:n,dwell:k.stop?2:undefined,stop:k.stop?{...k.stop,floor:n,title:n>2?`${n}층 · ${k.stop.title.replace(/^2층\s*/, '').replace(/20(\d)호/g,`${n}0$1호`)}`:k.stop.title}:undefined});
+  const tag=(k,n)=>({...k,floor:n,stop:k.stop?{...k.stop,floor:n,title:n>2?`${n}층 · ${k.stop.title.replace(/^2층\s*/, '').replace(/20(\d)호/g,`${n}0$1호`)}`:k.stop.title}:undefined});
   const out=initial.map(k=>tag(k,1));
   const corridor=n=>{
     const y=levelY(T,n)+EYE_HEIGHT;

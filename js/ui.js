@@ -171,7 +171,7 @@ export function tourCard(stop, i, n, room) {
   const area = room ? `${room.area.toFixed(1)}㎡ · ${py(room.area)}평` : '';
   const fin = room ? ({ wood: '원목마루', tile: '포세린 타일', tileDark: '욕실 타일', carpet: '타일카펫', concretePol: '폴리싱 콘크리트', epoxy: '에폭시', granite: '화강석' }[room.fin] || '') : '';
   const dimensions = room ? `${(room.r[2] - room.r[0]).toFixed(2)} × ${(room.r[3] - room.r[1]).toFixed(2)}m` : '';
-  return `<div class="tc-top"><b>STOP ${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}</b><span>${room ? room.floor + '층' : stop.floor ? stop.floor + '층' : ''}</span></div>
+  return `<div class="tc-top"><b>SPACE ${String(i + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}</b><span>${room ? room.floor + '층' : stop.floor ? stop.floor + '층' : ''}</span></div>
     <h4>${stop.title}</h4><p>${stop.desc || ''}</p>
     ${room ? `<div class="tc-kv"><div><span>면적</span>${area}</div><div><span>평면 치수</span>${dimensions}</div><div><span>바닥</span>${fin}</div><div><span>층고</span>${(room.floor === 1 ? PRJ.T.f1 : PRJ.T.ft).toFixed(2)}m</div></div>` : ''}`;
 }

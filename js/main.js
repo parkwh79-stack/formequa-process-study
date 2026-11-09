@@ -28,7 +28,7 @@ import { sunPosition } from './sun.js';
 import { ganttSVG, financeSVG, financeNums, renderEstimate, tourCard, radarSVG, won } from './ui.js';
 import { P, CHAPTERS, chapterAt, progressPerSecond, storyToScroll, scrollToStory } from './story.js';
 import { buildWalkthrough, groundVisit, motionProfile } from './walkthrough.js';
-import { createWalkInput, createProgressFollower, queueScrollProgress } from './scroll-motion.js';
+import { createWalkInput, createProgressFollower, queueScrollProgress, createScrollEcho, scrollsNatively, motionCaps } from './scroll-motion.js';
 
 const q = new URLSearchParams(location.search);
 const FIXED_P = q.has('p') ? parseFloat(q.get('p')) : null;
@@ -257,7 +257,7 @@ function buildWorld() {
     $('pins').appendChild(el); pins.push({ el, p: new THREE.Vector3(T.W / 2 + 1.0, y, hd) });
   }
   // 투어 정지점 점(dot) 버튼
-  $('tdots').innerHTML = tour.stops.map((s, i) => `<button data-i="${i}" title="${s.title}" aria-label="정지점 ${i + 1}: ${s.title}"></button>`).join('');
+  $('tdots').innerHTML = tour.stops.map((s, i) => `<button data-i="${i}" title="${s.title}" aria-label="공간 ${i + 1}: ${s.title}"></button>`).join('');
   $('tdots').querySelectorAll('button').forEach(b => b.addEventListener('click', () => goStop(+b.dataset.i)));
   // 정지점 이름 탭 (01·05·07)
   $('stabs').innerHTML = tour.stops.map((s, i) => `<button data-i="${i}">${String(i + 1).padStart(2, '0')} ${s.title.replace(' · 승강기',' EV')}</button>`).join('');
@@ -397,12 +397,32 @@ function switchType(key) {
 const state = { beat: -2, intro: (FIXED_P == null && !q.has('nointro') && !reducedMotion.matches) ? 0 : 1, lawStep: -1, p: FIXED_P ?? 0, target: FIXED_P ?? 0, hour: q.has('hour') ? parseFloat(q.get('hour')) : 14, playing: false, playTo:null, seeking: false, playBuildOnly: false, tourFocus: false, dirty: true, lastT: -1, lastHour: -1, lastStop: -2 };
 const motionFollower=createProgressFollower(state.p);
 const scrollMax = () => Math.max(1, document.documentElement.scrollHeight - innerHeight);
-addEventListener('scroll', () => { if (FIXED_P == null && performance.now()>(state.scrollSyncUntil||0)) scrubTo(scrollToStory(clamp01(scrollY / scrollMax())),false); }, { passive: true });
+// The page scroll position mirrors the story. Our own writes echo back as 'scroll' events (late on a
+// busy GPU), so they are recognised and ignored; only real user scrolling (scrollbar drag, keys,
+// a panel overscrolling into the page) moves the story, and it does so smoothly, never by teleport.
+const scrollEcho=createScrollEcho();
+addEventListener('scroll', () => {
+  if (FIXED_P != null) return;
+  const now=performance.now();
+  if (now<(state.scrollSyncUntil||0) || scrollEcho.isEcho(scrollY,now)) return;
+  const p=scrollToStory(clamp01(scrollY / scrollMax()));
+  scrollEcho.write(scrollY,now);
+  if(state.playing)setPlaying(false);
+  state.intro=1;state.seeking=false;
+  if(state.jump&&!state.jump.applied){state.jump.to=p;state.target=p;return;}
+  if(!reducedMotion.matches&&Math.abs(p-state.p)>.06){state.jump={to:p,t:0,applied:false};state.target=p;return;}   // long scrollbar drag: short paper fade
+  state.target=p;state.direct=true;                                                                       // follow without the walking limits
+}, { passive: true });
 function scrollToP(p, smoothScroll = true) {
   const value = clamp01(p);
   state.target = value;
-  state.scrollSyncUntil=performance.now()+(smoothScroll?1200:120);
-  if (FIXED_P == null) scrollTo({ top: storyToScroll(value) * scrollMax(), behavior: smoothScroll && !reducedMotion.matches ? 'smooth' : 'instant' });
+  if (FIXED_P == null){
+    const smooth=smoothScroll && !reducedMotion.matches;
+    state.syncedScrollY=storyToScroll(value)*scrollMax();
+    state.scrollSyncUntil=smooth?performance.now()+1200:0;
+    scrollEcho.write(state.syncedScrollY,performance.now());scrollEcho.write(Math.round(state.syncedScrollY),performance.now());
+    scrollTo({ top:state.syncedScrollY, behavior: smooth ? 'smooth' : 'instant' });
+  }
 }
 function scrubTo(p,syncScroll=true){
   setPlaying(false);state.p=state.target=clamp01(p);state.intro=1;state.jump=null;state.travelDir=1;
@@ -459,16 +479,16 @@ $('buildPlay').addEventListener('click', () => {
 });
 const walkInput=createWalkInput();
 function walkByGesture(pixels,event){
-  if(!W||document.body.classList.contains('estOpen')||event.target.closest('input,select,textarea,.stabs,.est,.dock'))return false;
-  if(state.jump){state.jump=null;state.target=state.p;motionFollower.reset(state.p);$('sceneTransition').style.opacity=0;}
-  const seconds=walkInput(pixels,performance.now());
+  if(!W)return false;
+  // Inner panels that can still scroll keep the wheel; everything else (dock, tabs, cards) drives the story.
+  // v3.9.2 let the wheel fall through over the dock, the page scrolled natively and the camera teleported.
+  if(scrollsNatively(event.target,pixels,document.body))return false;
   event.preventDefault();
-  if(seconds&&state.p>=P.land&&state.p<P.close){
-    const u=tourU(state.p),next=W.tour.skipDwell(u,Math.sign(seconds));
-    if(Math.abs(next-u)>1e-9){
-      state.p=state.target=P.land+next*(P.close-P.land);motionFollower.reset(state.p);
-    }
-  }
+  if(document.body.classList.contains('estOpen'))return true;   // estimate sheet open: the story stays put
+  if(state.jump){state.jump=null;state.target=state.p;motionFollower.reset(state.p);$('sceneTransition').style.opacity=0;}
+  state.direct=false;
+  const seconds=walkInput(pixels,performance.now());
+  if(seconds*(state.target-state.p)<0)motionFollower.reset(state.p);
   const rate=progressPerSecond(state.p,W.tour.duration);
   scrollToP(queueScrollProgress(state.p,state.target,seconds,rate),false);
   return true;
@@ -563,16 +583,17 @@ function frame(now) {
     if(jump.t>=.4)state.jump=null;
   }else if (state.playing) {
     const end=state.playTo??(state.playBuildOnly?P.buildEnd:1), dir=end>=state.p?1:-1;
-    const step=dt*progressPerSecond(state.p,W.tour.duration);
+    const step=dt*progressPerSecond(state.p,W.tour.duration)*(state.playTo!=null?4:1);   // 이전/다음 공간: 4배속으로 이동 후 정지
     const next=dir>0?Math.min(end,state.p+step):Math.max(end,state.p-step);
     proposed=next;
   }else{
     $('sceneTransition').style.opacity=0;
     proposed=reducedMotion.matches?state.target:motionFollower.step(state.p,state.target,dt);
   }
-  if(!state.jump&&!reducedMotion.matches){
+  if(state.direct&&Math.abs(state.target-state.p)<1e-5)state.direct=false;
+  if(!state.jump&&!state.direct&&!reducedMotion.matches){
     const onFoot=state.p>=P.land||(state.p>=P.entry&&state.p<=P.cut),lift=state.p>=P.land&&W.tour.sample(tourU(state.p)).lift;
-    proposed=limitCameraProgress(state.p,proposed,narrativePose,{angle:16*Math.PI/180*dt,distance:onFoot?(lift?.phase==='상승'?.85:1.05)*dt:Infinity,lens:.9*dt});
+    proposed=limitCameraProgress(state.p,proposed,narrativePose,motionCaps(dt,{onFoot,lift:lift?.phase==='상승'}));
   }
   state.p=proposed;
   if(state.playing){
@@ -845,4 +866,4 @@ buildWorld();
 if (FIXED_P != null) document.documentElement.classList.add('fixed');
 if (q.has('est')) document.body.classList.add('estOpen');
 requestAnimationFrame(frame);
-window.__ks = { state, PRJ, get W() { return W; }, switchType, camera, renderer, THREE };
+window.__ks = { state, PRJ, get W() { return W; }, switchType, camera, renderer, THREE, narrativePose, P };
