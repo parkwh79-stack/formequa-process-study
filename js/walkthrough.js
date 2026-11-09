@@ -12,6 +12,13 @@ export const levelY = (T, n) => (T.structure === 'timber' ? 0.3 : 0) + (n <= 1 ?
 const midpoint = a => (a[0] + a[1]) / 2;
 const pose = (pos, look, extra = {}) => ({ pos, look, ...extra });
 
+export function entranceApproach(T,outsideZ=T.D/2+2.2){
+  const x=T.frontDoors[0],eye=levelY(T,1)+EYE_HEIGHT,hd=T.D/2;
+  // Keep the view through the clear door axis until well inside. A nearby look target
+  // formerly caused a turn and its reversal while crossing the glass door and jambs.
+  const forward=[x,eye,hd-5];
+  return [outsideZ,hd+.8,hd-.35,hd-1.25].map(z=>pose([x,eye,z],forward));
+}
 export function groundVisit(T) {
   const eye = levelY(T, 1) + EYE_HEIGHT, hd = T.D / 2;
   if (!T.piloti) {
@@ -23,7 +30,8 @@ export function groundVisit(T) {
     const off = levelY(T, T.planFloor);
     const destination = pose([inside.pos[0], inside.pos[1] + off, inside.pos[2]], [inside.look[0], inside.look[1] + off, inside.look[2]]);
     const threshold = pose([x,eye,hd-0.85],[x,eye-0.08,hd-3]);
-    return [outside, door, threshold, destination, { ...destination, hold: 2.8 }];
+    const approach=T.frontDoors?.length?entranceApproach(T):[outside,door,threshold];
+    return [...approach, destination, { ...destination, hold: 2.8 }];
   }
   const core = T.core, door = core.frontDoor1 || core.frontDoor;
   const x = midpoint(door), z = core.z1;
@@ -47,10 +55,10 @@ export function elevatorLeg(T, from = 1, to = 2) {
     pose(front,[x,a+EYE_HEIGHT+.25,z0],{hold:1.2,lift:lift(a,0,'호출')}),
     pose(front,[x,a+EYE_HEIGHT+.25,z0],{hold:2.4,lift:lift(a,1,'문 열림')}),
     pose(inside,[x,a+EYE_HEIGHT,z0],{speed:0.38,lift:lift(a,1,'탑승')}),
-    pose(inside,view(a),{hold:2.8,turnSpeed:0.5,lift:lift(a,1,'탑승')}),
+    pose(inside,view(a),{hold:2.8,turnSpeed:0.3,lift:lift(a,1,'탑승')}),
     pose(inside,view(a),{hold:2.4,lift:lift(a,0,'문 닫힘')}),
     pose([x,b+EYE_HEIGHT,z],view(b),{speed:0.85,lift:lift(b,0,'상승')}),
-    pose([x,b+EYE_HEIGHT,z],[x,b+EYE_HEIGHT,z1+3],{hold:3,turnSpeed:0.5,lift:lift(b,0,'도착')}),
+    pose([x,b+EYE_HEIGHT,z],[x,b+EYE_HEIGHT,z1+3],{hold:3,turnSpeed:0.3,lift:lift(b,0,'도착')}),
     pose([x,b+EYE_HEIGHT,z],[x,b+EYE_HEIGHT,z1+3],{hold:2.6,lift:lift(b,1,'문 열림')}),
     pose([x,b+EYE_HEIGHT,z1+0.7],[x,b+EYE_HEIGHT,hallZ],{speed:0.38,lift:lift(b,1,'하차')}),
     pose(hall,hallLook,{speed:0.42,lift:lift(b,1,'하차')}),
@@ -74,8 +82,8 @@ export function buildWalkthrough(T) {
   const template=commercial?original.slice(upper):original;
   const initial=commercial?original.slice(0,hall):groundVisit(T).slice(0,3).map((k,i)=>({...k,...(i===0?{stop:{floor:1,title:'1층 공용 현관',room:T.use==='dormitory'?'lobby1':'core1',desc:'기둥 사이 입구로 들어와 승강기 홀로 이동합니다.',reveal:['lobby1','core1']}}:{})}));
   if(commercial){
-    const x=T.frontDoors[0],y=levelY(T,1)+EYE_HEIGHT,hd=T.D/2;
-    initial.splice(1,0,pose([x,y,hd+0.8],[x,y,hd-3]),pose([x,y,hd-0.9],[initial[1].pos[0],y,initial[1].pos[2]]));
+    const first=initial[0],approach=entranceApproach(T,first.pos[2]);
+    initial.splice(0,1,...approach.map((k,i)=>({...k,...(i===0?{stop:first.stop}:{})})));
   }
   const tag=(k,n)=>({...k,floor:n,dwell:k.stop?6:undefined,stop:k.stop?{...k.stop,floor:n,title:n>2?`${n}층 · ${k.stop.title.replace(/^2층\s*/, '').replace(/20(\d)호/g,`${n}0$1호`)}`:k.stop.title}:undefined});
   const out=initial.map(k=>tag(k,1));

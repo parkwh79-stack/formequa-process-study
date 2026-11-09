@@ -29,12 +29,8 @@ export function camAt(p, keys, aspect) {
 
 export function setCam(camera, c) {
   camera.fov = c.fov;
-  const d = (c.fh / 2) / Math.tan(c.fov * D2R / 2);
-  const tgt = new THREE.Vector3(...c.t);
-  const pitch = Math.min(89.5, c.pitch);
-  const dir = new THREE.Vector3(Math.sin(c.yaw * D2R) * Math.cos(pitch * D2R), Math.sin(pitch * D2R), Math.cos(c.yaw * D2R) * Math.cos(pitch * D2R));
-  camera.position.copy(tgt).addScaledVector(dir, d);
-  if (Number.isFinite(c.eyeHeight)) camera.position.y = c.eyeHeight;
+  const {pos,look:tgt,distance:d}=framePose(c);
+  camera.position.copy(pos);
   if (Math.abs(c.viewShift || 0) > 1e-5) camera.setViewOffset(camera.aspect, 1, 0, c.viewShift, camera.aspect, 1);
   else camera.clearViewOffset();
   camera.near = Math.max(0.1, d - 110);
@@ -43,6 +39,33 @@ export function setCam(camera, c) {
   camera.lookAt(tgt);
   camera.updateProjectionMatrix();
   return d;
+}
+export function framePose(c) {
+  const distance=c.fh/(2*Math.tan(c.fov*D2R/2)), pitch=Math.min(89.5,c.pitch||0)*D2R, yaw=(c.yaw||0)*D2R;
+  const look=new THREE.Vector3(...c.t),pos=look.clone().addScaledVector(new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)),distance);
+  if(Number.isFinite(c.eyeHeight))pos.y=c.eyeHeight;
+  return {pos,look,fov:c.fov,distance};
+}
+// Limit the motion actually displayed, including wheel response and low-frame-rate catch-up.
+export function limitCameraProgress(current,next,sample,{angle=Infinity,distance=Infinity,lens=Infinity}={}){
+  if(current===next)return current;
+  const start=sample(current);
+  function fits(p){
+    let previous=start,turn=0,travel=0,zoom=0;
+    for(let i=1;i<=4;i++){
+      const pose=sample(current+(p-current)*i/4);
+      const a=previous.look.clone().sub(previous.pos).normalize(),b=pose.look.clone().sub(pose.pos).normalize();
+      turn+=Math.acos(Math.max(-1,Math.min(1,a.dot(b))));travel+=previous.pos.distanceTo(pose.pos);
+      zoom+=Math.abs(Math.log(Math.tan(pose.fov*D2R/2)/Math.tan(previous.fov*D2R/2)));
+      if(turn>angle+1e-9||travel>distance+1e-9||zoom>lens+1e-9)return false;
+      previous=pose;
+    }
+    return true;
+  }
+  if(fits(next))return next;
+  let lo=0,hi=1;
+  for(let i=0;i<14;i++){const mid=(lo+hi)/2;if(fits(current+(next-current)*mid))lo=mid;else hi=mid;}
+  return current+(next-current)*lo;
 }
 // 위치·시선 → 프레임 키 (투어 첫 장면을 돌리 줌의 도착점으로 쓰기 위해)
 export function poseToKey(pos, look, fov) {
@@ -53,7 +76,7 @@ export function poseToKey(pos, look, fov) {
 export const focalMM = fov => 12 / Math.tan(fov * D2R / 2);
 
 // ② 투어: 키 사이 이동(거리 비례) + 정지점 체류. sample(u) → 위치·시선·현재 정지점
-export function makeTour(keys, yOff = 0, { speed = 0.48, dwell = 6, turnSpeed = 0.42 } = {}) {
+export function makeTour(keys, yOff = 0, { speed = 0.48, dwell = 6, turnSpeed = 0.22 } = {}) {
   const P = keys.map(k => new THREE.Vector3(k.pos[0], k.pos[1] + yOff, k.pos[2]));
   const yaw = [], pitch = [];
   keys.forEach((k, i) => {

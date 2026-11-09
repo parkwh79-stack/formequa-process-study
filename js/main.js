@@ -23,12 +23,12 @@ import { RULES_ASOF } from './law.js';
 import { PRJ, loadType, recompute, phaseByKey, floorY, roofY, dateAt, fmtDate, workDaysTo, clamp01, smooth, lerp, C, PYEONG } from './project.js';
 import { buildAll } from './building.js';
 import { FX } from './kit.js';
-import { camAt, setCam, focalMM, poseToKey, makeTour } from './camera.js';
+import { camAt, setCam, framePose, limitCameraProgress, focalMM, poseToKey, makeTour } from './camera.js';
 import { sunPosition } from './sun.js';
 import { ganttSVG, financeSVG, financeNums, renderEstimate, tourCard, radarSVG, won } from './ui.js';
 import { P, CHAPTERS, chapterAt, progressPerSecond, storyToScroll, scrollToStory } from './story.js';
 import { buildWalkthrough, groundVisit, motionProfile } from './walkthrough.js';
-import { createWalkInput } from './scroll-motion.js';
+import { createWalkInput, createProgressFollower, queueScrollProgress } from './scroll-motion.js';
 
 const q = new URLSearchParams(location.search);
 const FIXED_P = q.has('p') ? parseFloat(q.get('p')) : null;
@@ -103,6 +103,14 @@ scene.add(groundLine);
 // ── 월드 (유형마다 다시 만든다) ──────────────────────────────────────────
 let W = null;            // { B, KEYS, tour, ... }
 const FOV_WALK = () => motionProfile(PRJ.T).fov + (innerWidth / innerHeight < 0.9 ? 6 : 0);
+function narrativePose(p){
+  if(p>=P.land)return {...W.tour.sample(tourU(p)),fov:FOV_WALK()};
+  if(p>=P.entry&&p<=P.cut){
+    const u=p<=P.ground?(p-P.entry)/(P.ground-P.entry):1-(p-P.ground)/(P.cut-P.ground);
+    return {...W.groundTour.sample(u),fov:FOV_WALK()};
+  }
+  return framePose(camAt(p,W.KEYS,camera.aspect));
+}
 
 // ── 유형별 카메라 동선 (공정 구간) ───────────────────────────────────────
 // 실제 공정 시점에 맞춘 굴착 개요 → 골조 이후 지상 눈높이의 유형별 관찰 호.
@@ -199,7 +207,7 @@ function buildWorld() {
     { p: P.entry, ...groundKey(0) },
     { p: P.entry + 0.012, ...groundKey(0.5) },
     { p: P.ground, ...groundKey(1) },
-    { p: P.cut, ...groundKey(0.2) },
+    { p: P.cut, ...groundKey(0) },
     { p: P.planIn - 0.016, t: [0, yOff, 0.5 + (T.planShiftZ || 0)], fh: (T.D + (T.wing?.depth || 0)) * 1.8, fov: 18, yaw: 0, pitch: 65, minW: T.W * 1.8 },
     { p: P.planIn, t: [0, yOff, 0.5 + (T.planShiftZ || 0)], fh: (T.D + (T.wing?.depth || 0)) * 1.5, fov: 2.5, yaw: 0, pitch: 89.5, minW: T.W * 1.75 },
     { p: P.planHold, t: [0, yOff, 0.5 + (T.planShiftZ || 0)], fh: (T.D + (T.wing?.depth || 0)) * 1.5, fov: 2.5, yaw: 0, pitch: 89.5, minW: T.W * 1.75 },
@@ -263,7 +271,7 @@ function buildWorld() {
   const ceilCut = (pf < T.floors ? floorY(pf + 1) : roofY()) - 0.03;
   const inside = v => Math.abs(v[0]) < T.W / 2 - 0.05 && Math.abs(v[2]) < T.D / 2 - 0.05;
   const finalCut = inside(tour.startPos) ? ceilCut : 1e4;
-  W = { scan, scanH, sweepR, mkKeys, B, KEYS, tour, revealAt, roomById, allRooms, labels, pins, dims, planCut, wallTop, ceilCut, finalCut, inside, startY: tour.startPos[1], groundBase: B.groundMat.color.clone() };
+  W = { scan, scanH, sweepR, mkKeys, B, KEYS, tour, groundTour, revealAt, roomById, allRooms, labels, pins, dims, planCut, wallTop, ceilCut, finalCut, inside, startY: tour.startPos[1], groundBase: B.groundMat.color.clone() };
   syncTypeUI();
 }
 
@@ -321,7 +329,7 @@ function closingHTML() {
 function bindClosing() {
   $('closing').querySelectorAll('[data-c]').forEach(b => b.addEventListener('click', () => {
     const c = b.dataset.c;
-    if (c === 'top') navigate(0, false);
+    if (c === 'top') navigate(0, false, true);
     if (c === 'est') { setPlaying(false); document.body.classList.add('estOpen'); }
     if (c === 'next') switchType(b.dataset.k);
   }));
@@ -382,23 +390,36 @@ function switchType(key) {
   buildWorld();
   scrollTo(0, 0);
   state.p = state.target = FIXED_P ?? 0;
+  motionFollower.reset(state.p);state.jump=null;
 }
 
 // ── 상태 · 입력 ─────────────────────────────────────────────────────────
 const state = { beat: -2, intro: (FIXED_P == null && !q.has('nointro') && !reducedMotion.matches) ? 0 : 1, lawStep: -1, p: FIXED_P ?? 0, target: FIXED_P ?? 0, hour: q.has('hour') ? parseFloat(q.get('hour')) : 14, playing: false, playTo:null, seeking: false, playBuildOnly: false, tourFocus: false, dirty: true, lastT: -1, lastHour: -1, lastStop: -2 };
+const motionFollower=createProgressFollower(state.p);
 const scrollMax = () => Math.max(1, document.documentElement.scrollHeight - innerHeight);
-addEventListener('scroll', () => { if (FIXED_P == null && performance.now()>(state.scrollSyncUntil||0)) state.target = scrollToStory(clamp01(scrollY / scrollMax())); }, { passive: true });
+addEventListener('scroll', () => { if (FIXED_P == null && performance.now()>(state.scrollSyncUntil||0)) scrubTo(scrollToStory(clamp01(scrollY / scrollMax())),false); }, { passive: true });
 function scrollToP(p, smoothScroll = true) {
   const value = clamp01(p);
   state.target = value;
   state.scrollSyncUntil=performance.now()+(smoothScroll?1200:120);
   if (FIXED_P == null) scrollTo({ top: storyToScroll(value) * scrollMax(), behavior: smoothScroll && !reducedMotion.matches ? 'smooth' : 'instant' });
 }
-function navigate(p, smoothScroll = true, seek = false) { setPlaying(false); state.seeking = seek; state.intro = 1; scrollToP(p, smoothScroll); }
+function scrubTo(p,syncScroll=true){
+  setPlaying(false);state.p=state.target=clamp01(p);state.intro=1;state.jump=null;state.travelDir=1;
+  motionFollower.reset(state.p);$('sceneTransition').style.opacity=0;
+  if(syncScroll)scrollToP(state.p,false);
+}
+function navigate(p, smoothScroll = true, seek = false) {
+  setPlaying(false);state.intro=1;
+  if(seek&&!reducedMotion.matches){
+    state.jump={to:clamp01(p),t:0,applied:false};scrollToP(p,false);state.scrollSyncUntil=performance.now()+600;
+  }else if(seek)scrubTo(p);
+  else scrollToP(p,smoothScroll);
+}
 function setPlaying(on, buildOnly = false) {
   state.playing = on; state.playBuildOnly = on && buildOnly;
   if(!on) state.playTo=null;
-  else {state.seeking=false;state.target=state.p;}
+  else {state.seeking=false;state.target=state.p;state.jump=null;motionFollower.reset(state.p);}
   $('play').classList.toggle('on', on); $('play').setAttribute('aria-pressed', String(on));
   $('play').textContent = on ? '❚❚ 정지' : '▶ 자동 재생';
   $('tourPlay').textContent = on ? '❚❚ 일시정지' : '▶ 층별 투어';
@@ -425,8 +446,8 @@ function updateJourney(p) {
     if (on) button.setAttribute('aria-current', 'step'); else button.removeAttribute('aria-current');
   });
 }
-$('sceneScrub').addEventListener('input', e => navigate(+e.target.value / 1000, false, true));
-$('weekScrub').addEventListener('input', e => navigate(pAtWeek(+e.target.value), false, true));
+$('sceneScrub').addEventListener('input', e => scrubTo(+e.target.value / 1000));
+$('weekScrub').addEventListener('input', e => scrubTo(pAtWeek(+e.target.value)));
 $('chapterPrev').addEventListener('click', () => navigate(CHAPTERS[Math.max(0, chapterAt(state.p) - 1)].jump, true, true));
 $('chapterNext').addEventListener('click', () => navigate(CHAPTERS[Math.min(CHAPTERS.length - 1, chapterAt(state.p) + 1)].jump, true, true));
 $('enterStudy').addEventListener('click', () => navigate(0.06));
@@ -438,10 +459,12 @@ $('buildPlay').addEventListener('click', () => {
 });
 const walkInput=createWalkInput();
 function walkByGesture(pixels,event){
-  if(state.p<P.land-.0001||state.p>=P.close||document.body.classList.contains('estOpen')||event.target.closest('input,select,textarea,.stabs,.est,.dock'))return false;
+  if(!W||document.body.classList.contains('estOpen')||event.target.closest('input,select,textarea,.stabs,.est,.dock'))return false;
+  if(state.jump){state.jump=null;state.target=state.p;motionFollower.reset(state.p);$('sceneTransition').style.opacity=0;}
   const seconds=walkInput(pixels,performance.now());
   event.preventDefault();
-  scrollToP(Math.max(P.land-.002,Math.min(1,state.target+seconds/W.tour.duration*(P.close-P.land))),false);
+  const rate=progressPerSecond(state.p,W.tour.duration);
+  scrollToP(queueScrollProgress(state.p,state.target,seconds,rate),false);
   return true;
 }
 addEventListener('wheel', e => {
@@ -461,7 +484,7 @@ function scrub(e) {
   const svg = $('gantt').querySelector('svg'); if (!svg) return;
   const r = svg.getBoundingClientRect(), x0 = +svg.dataset.x0, x1 = +svg.dataset.x1;
   const x = (e.clientX - r.left) * (svg.viewBox.baseVal.width / r.width);
-  navigate(pAtWeek(clamp01((x - x0) / (x1 - x0)) * PRJ.WEEKS), !dragging);
+  scrubTo(pAtWeek(clamp01((x - x0) / (x1 - x0)) * PRJ.WEEKS));
 }
 $('gantt').addEventListener('pointerdown', e => { if (e.button !== 0) return; e.preventDefault(); dragging = true; $('gantt').setPointerCapture(e.pointerId); scrub(e); });
 addEventListener('pointermove', e => { if (dragging) scrub(e); });
@@ -498,7 +521,7 @@ function goStop(i) {
   setPlaying(true);state.playTo=goal;state.intro=1;
 }
 $('tprev').addEventListener('click', () => goStop(state.lastStop - 1));
-$('tnext').addEventListener('click', () => { if (state.lastStop >= W.tour.stops.length - 1) navigate(0, false); else goStop(state.lastStop + 1); });
+$('tnext').addEventListener('click', () => { if (state.lastStop >= W.tour.stops.length - 1) navigate(0, false, true); else goStop(state.lastStop + 1); });
 addEventListener('keydown', e => {
   if (e.target.closest('input, select, textarea, button, a, [contenteditable="true"]') || e.altKey || e.ctrlKey || e.metaKey || document.body.classList.contains('estOpen')) return;
   if (e.code === 'Space') { e.preventDefault(); $('play').click(); return; }
@@ -521,18 +544,36 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.25, (now - last) / 1000); last = now;
   if (!W) return;
-  const previousP=state.p;
-  if (state.playing) {
+  let previousP=state.p;
+  let proposed=state.p;
+  if(state.jump){
+    const jump=state.jump;jump.t+=dt;
+    $('sceneTransition').style.opacity=jump.applied?Math.max(0,1-(jump.t-.16)/.24):Math.min(1,jump.t/.16);
+    if(jump.t>=.16&&!jump.applied){
+      if(jump.covered){state.p=state.target=jump.to;previousP=state.p;motionFollower.reset(state.p);jump.applied=true;jump.t=.16;state.dirty=true;}
+      else jump.covered=true;
+    }
+    proposed=state.p;
+    if(jump.t>=.4)state.jump=null;
+  }else if (state.playing) {
     const end=state.playTo??(state.playBuildOnly?P.buildEnd:1), dir=end>=state.p?1:-1;
     const step=dt*progressPerSecond(state.p,W.tour.duration);
     const next=dir>0?Math.min(end,state.p+step):Math.max(end,state.p-step);
-    state.p=next;scrollToP(next,false);
-    if(Math.abs(next-end)<1e-9)setPlaying(false);
+    proposed=next;
+  }else{
+    $('sceneTransition').style.opacity=0;
+    proposed=reducedMotion.matches?state.target:motionFollower.step(state.p,state.target,dt);
   }
-  let change = (state.target - state.p) * (reducedMotion.matches ? 1 : 1 - Math.exp(-dt * (state.p>=P.land?10:6)));
-  const walking = state.p >= P.land && state.p < P.close && state.target >= P.land;
-  state.p += change;
-  if (Math.abs(state.target - state.p) < (walking?1e-7:1e-4)) { state.p = state.target; state.seeking = false; }
+  if(!state.jump&&!reducedMotion.matches){
+    const onFoot=state.p>=P.land||(state.p>=P.entry&&state.p<=P.cut),lift=state.p>=P.land&&W.tour.sample(tourU(state.p)).lift;
+    proposed=limitCameraProgress(state.p,proposed,narrativePose,{angle:16*Math.PI/180*dt,distance:onFoot?(lift?.phase==='상승'?.85:.45)*dt:Infinity,lens:.9*dt});
+  }
+  state.p=proposed;
+  if(state.playing){
+    const end=state.playTo??(state.playBuildOnly?P.buildEnd:1);
+    scrollToP(state.p,false);motionFollower.reset(state.p);
+    if(Math.abs(state.p-end)<1e-9)setPlaying(false);
+  }
   if (state.intro < 1) state.intro = Math.min(1, state.intro + dt / 2.4);             // 플로터 인트로 2.4초
   const p = state.p, T = PRJ.T, t = weekAt(p), u = tourU(p);
   if(Math.abs(p-previousP)>1e-9)state.travelDir=Math.sign(p-previousP);
@@ -566,7 +607,11 @@ function frame(now) {
 
   // 2) 카메라: 프레임 키(돌리 줌) → 착지 후 시간 기반 보행 경로
   let camY, look;
-  if (!inTour) {
+  if(p>=P.entry&&p<=P.cut){
+    const s=narrativePose(p);camera.clearViewOffset();camera.fov=s.fov;camera.near=.1;camera.far=160;
+    camera.position.copy(s.pos);camera.up.set(0,1,0);camera.lookAt(s.look);camera.updateProjectionMatrix();
+    scene.fog.near=60;scene.fog.far=420;camY=s.pos.y;look=s.look;state.cam={fov:s.fov};
+  } else if (!inTour) {
     const c = camAt(p, W.KEYS, camera.aspect);
     const d = setCam(camera, c);
     scene.fog.near = d + 40; scene.fog.far = d + 320;

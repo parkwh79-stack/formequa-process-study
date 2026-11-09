@@ -1,5 +1,7 @@
 // One physical grid for structural columns, entrance clearances and camera approaches.
 export const ENTRANCE_WIDTH = 1.4;
+export const DOOR_FRAME = .06;
+export const DOOR_OPEN_ANGLE = 1.4;
 export function columnAxes(T) {
   const lin = (a,b,n) => Array.from({length:n},(_,i)=>a+(b-a)*i/(n-1));
   return { xs: lin(-T.W/2+0.3,T.W/2-0.3,T.W>12.5?4:3), zs: lin(-T.D/2+0.3,T.D/2-0.3,3), width: ['storefront','curtain'].includes(T.style)?0.6:0.5 };

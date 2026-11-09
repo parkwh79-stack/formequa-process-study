@@ -84,7 +84,7 @@ for (const key of Object.keys(TYPES)) {
   }
   assert.ok(maxSpeed < 2.1, `${key}: no flight between waypoints (${maxSpeed} m/s)`);
   assert.ok(maxWalkSpeed<.6,`${key}: slow indoor walking (${maxWalkSpeed})`);
-  assert.ok(maxTurn<.51,`${key}: measured head turns (${maxTurn} rad/s)`);
+  assert.ok(maxTurn<.31,`${key}: measured head turns (${maxTurn} rad/s)`);
   const camera = new THREE.PerspectiveCamera();
   setCam(camera, poseToKey(tour.startPos, tour.startLook, profile.fov));
   near(camera.position.distanceTo(new THREE.Vector3(...tour.startPos)), 0, `${key}: plan landing has no camera jump`);

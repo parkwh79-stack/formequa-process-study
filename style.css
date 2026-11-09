@@ -14,6 +14,7 @@ html, body { margin: 0; background: var(--paper); color: var(--ink); font-family
 html.fixed { overflow: hidden; }
 #gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
 .track { height: 1700vh; }
+#sceneTransition { position:fixed;inset:0;z-index:3;background:var(--paper);opacity:0;pointer-events:none; }
 button { font-family: var(--sans); cursor: pointer; }
 
 .top { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 14px; padding: 12px var(--g); z-index: 6; flex-wrap: wrap; }

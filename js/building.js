@@ -15,7 +15,7 @@ import { makeKit } from './kit.js';
 import { metricUV } from './textures.js';
 import { buildInterior } from './interior.js';
 import { createElevator } from './elevator.js';
-import { columnAxes, ENTRANCE_WIDTH } from './access.js';
+import { columnAxes, ENTRANCE_WIDTH, DOOR_FRAME, DOOR_OPEN_ANGLE } from './access.js';
 
 const ROT = { S: 0, N: Math.PI, E: Math.PI / 2, W: -Math.PI / 2 };
 const lu = (side, u) => (side === 'S' || side === 'W' ? u : -u);       // 월드 u → 벽 로컬 u
@@ -74,7 +74,7 @@ export function buildAll() {
   // 창(유리+프레임) 또는 문(프레임+열린 문짝) — 바닥 중심 원점, +z가 바깥
   function win(w, h, { door = false, mullion = w > 1.5, leaf = 'oak', glassDoor = false } = {}) {
     const g = new THREE.Group();
-    const f = 0.06, dp = 0.09;
+    const f = DOOR_FRAME, dp = 0.09;
     if (!door) g.add(box(w - 0.04, h - 0.04, 0.03, 'glass', 0, 0.02, 0, { edges: false, cast: false }));
     g.add(box(w, f, dp, 'frame', 0, 0, 0), box(w, f, dp, 'frame', 0, h - f, 0));
     g.add(box(f, h, dp, 'frame', -w / 2 + f / 2, 0, 0), box(f, h, dp, 'frame', w / 2 - f / 2, 0, 0));
@@ -83,7 +83,7 @@ export function buildAll() {
       const hinge = new THREE.Group(); hinge.position.set(-w / 2 + f, 0, -0.02);
       const lw = w - 2 * f;
       hinge.add(glassDoor ? box(lw, h - f, 0.03, 'glass', lw / 2, 0, 0, { edges: false }) : box(lw, h - f, 0.045, leaf, lw / 2, 0, 0));
-      hinge.rotation.y = 1.4; g.add(hinge);
+      hinge.rotation.y = DOOR_OPEN_ANGLE; g.add(hinge);
     }
     return g;
   }

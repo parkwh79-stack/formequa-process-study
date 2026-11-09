@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.8.8">
+<link rel="stylesheet" href="style.css?v=3.9.0">
 <!-- 오류가 나면 화면에 바로 보여 준다 (모듈 로딩 실패·file:// 실행 등 진단용) -->
 <script>
 (function () {
@@ -26,28 +26,29 @@
 { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
-    "./js/types.js": "./js/types.js?v=3.8.8",
-    "./js/project.js": "./js/project.js?v=3.8.8",
-    "./js/law.js": "./js/law.js?v=3.8.8",
-    "./js/parking.js": "./js/parking.js?v=3.8.8",
-    "./js/camera.js": "./js/camera.js?v=3.8.8",
-    "./js/walkthrough.js": "./js/walkthrough.js?v=3.8.8",
-    "./js/story.js": "./js/story.js?v=3.8.8",
-    "./js/kit.js": "./js/kit.js?v=3.8.8",
-    "./js/building.js": "./js/building.js?v=3.8.8",
-    "./js/interior.js": "./js/interior.js?v=3.8.8",
-    "./js/textures.js": "./js/textures.js?v=3.8.8",
-    "./js/sun.js": "./js/sun.js?v=3.8.8",
-    "./js/ui.js": "./js/ui.js?v=3.8.8",
-    "./js/elevator.js": "./js/elevator.js?v=3.8.8",
-    "./js/scroll-motion.js": "./js/scroll-motion.js?v=3.8.8",
-    "./js/access.js": "./js/access.js?v=3.8.8",
-    "./js/rect-patches.js": "./js/rect-patches.js?v=3.8.8"
+    "./js/types.js": "./js/types.js?v=3.9.0",
+    "./js/project.js": "./js/project.js?v=3.9.0",
+    "./js/law.js": "./js/law.js?v=3.9.0",
+    "./js/parking.js": "./js/parking.js?v=3.9.0",
+    "./js/camera.js": "./js/camera.js?v=3.9.0",
+    "./js/walkthrough.js": "./js/walkthrough.js?v=3.9.0",
+    "./js/story.js": "./js/story.js?v=3.9.0",
+    "./js/kit.js": "./js/kit.js?v=3.9.0",
+    "./js/building.js": "./js/building.js?v=3.9.0",
+    "./js/interior.js": "./js/interior.js?v=3.9.0",
+    "./js/textures.js": "./js/textures.js?v=3.9.0",
+    "./js/sun.js": "./js/sun.js?v=3.9.0",
+    "./js/ui.js": "./js/ui.js?v=3.9.0",
+    "./js/elevator.js": "./js/elevator.js?v=3.9.0",
+    "./js/scroll-motion.js": "./js/scroll-motion.js?v=3.9.0",
+    "./js/access.js": "./js/access.js?v=3.9.0",
+    "./js/rect-patches.js": "./js/rect-patches.js?v=3.9.0"
 } }
 </script>
 </head>
 <body>
 <canvas id="gl" aria-hidden="true"></canvas>
+<div id="sceneTransition" aria-hidden="true"></div>
 <div class="track" aria-hidden="true"></div>
 
 <header class="top">
@@ -159,6 +160,6 @@
 <div class="err" id="err"><b>실행 중 문제가 생겼습니다</b><pre></pre><small>이 내용을 캡처해 알려 주시면 원인을 바로 찾을 수 있습니다.</small></div>
 
 <i class="mk tl"></i><i class="mk tr"></i><i class="mk bl"></i><i class="mk br"></i>
-<script type="module" src="js/main.js?v=3.8.8"></script>
+<script type="module" src="js/main.js?v=3.9.0"></script>
 </body>
 </html>
