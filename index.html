@@ -5,10 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FORMEQUA — From Drawing to Site</title>
 <meta name="theme-color" content="#f5f3ee">
+<!-- v4.4 링크 미리보기(카카오톡·슬랙·페이스북 등): 사진 헤더 = og:image, 설명 헤더 = og:title·og:description -->
+<meta name="description" content="입면도 한 장이 3D가 되고, 법규·주차·공정·자금을 거쳐 실내까지 걸어 들어가는 스크롤 연구. FORMEQUA Process Study · POWERED BY WAN2">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FORMEQUA Process Study">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:url" content="https://formequa-process-study.web.app/">
+<meta property="og:title" content="FORMEQUA — From drawing to site. 도면에서 준공까지">
+<meta property="og:description" content="입면도 한 장이 3D가 되고, 법규·주차·공정·자금을 거쳐 실내까지 걸어 들어가는 스크롤 연구.">
+<meta property="og:image" content="https://formequa-process-study.web.app/og-image.png">
+<meta property="og:image:secure_url" content="https://formequa-process-study.web.app/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="중소형 빌딩 입면도와 FORMEQUA From drawing to site 제목">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="FORMEQUA — From drawing to site. 도면에서 준공까지">
+<meta name="twitter:description" content="입면도 한 장이 3D가 되고, 법규·주차·공정·자금을 거쳐 실내까지 걸어 들어가는 스크롤 연구.">
+<meta name="twitter:image" content="https://formequa-process-study.web.app/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4.3.1">
+<link rel="stylesheet" href="style.css?v=4.4.0">
 <!-- 오류가 나면 화면에 바로 보여 준다 (모듈 로딩 실패·file:// 실행 등 진단용) -->
 <script>
 (function () {
@@ -26,23 +44,23 @@
 { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
-    "./js/types.js": "./js/types.js?v=4.3.1",
-    "./js/project.js": "./js/project.js?v=4.3.1",
-    "./js/law.js": "./js/law.js?v=4.3.1",
-    "./js/parking.js": "./js/parking.js?v=4.3.1",
-    "./js/camera.js": "./js/camera.js?v=4.3.1",
-    "./js/walkthrough.js": "./js/walkthrough.js?v=4.3.1",
-    "./js/story.js": "./js/story.js?v=4.3.1",
-    "./js/kit.js": "./js/kit.js?v=4.3.1",
-    "./js/building.js": "./js/building.js?v=4.3.1",
-    "./js/interior.js": "./js/interior.js?v=4.3.1",
-    "./js/textures.js": "./js/textures.js?v=4.3.1",
-    "./js/sun.js": "./js/sun.js?v=4.3.1",
-    "./js/ui.js": "./js/ui.js?v=4.3.1",
-    "./js/elevator.js": "./js/elevator.js?v=4.3.1",
-    "./js/scroll-motion.js": "./js/scroll-motion.js?v=4.3.1",
-    "./js/access.js": "./js/access.js?v=4.3.1",
-    "./js/rect-patches.js": "./js/rect-patches.js?v=4.3.1"
+    "./js/types.js": "./js/types.js?v=4.4.0",
+    "./js/project.js": "./js/project.js?v=4.4.0",
+    "./js/law.js": "./js/law.js?v=4.4.0",
+    "./js/parking.js": "./js/parking.js?v=4.4.0",
+    "./js/camera.js": "./js/camera.js?v=4.4.0",
+    "./js/walkthrough.js": "./js/walkthrough.js?v=4.4.0",
+    "./js/story.js": "./js/story.js?v=4.4.0",
+    "./js/kit.js": "./js/kit.js?v=4.4.0",
+    "./js/building.js": "./js/building.js?v=4.4.0",
+    "./js/interior.js": "./js/interior.js?v=4.4.0",
+    "./js/textures.js": "./js/textures.js?v=4.4.0",
+    "./js/sun.js": "./js/sun.js?v=4.4.0",
+    "./js/ui.js": "./js/ui.js?v=4.4.0",
+    "./js/elevator.js": "./js/elevator.js?v=4.4.0",
+    "./js/scroll-motion.js": "./js/scroll-motion.js?v=4.4.0",
+    "./js/access.js": "./js/access.js?v=4.4.0",
+    "./js/rect-patches.js": "./js/rect-patches.js?v=4.4.0"
 } }
 </script>
 </head>
@@ -188,6 +206,6 @@
 <div class="err" id="err"><b>실행 중 문제가 생겼습니다</b><pre></pre><small>이 내용을 캡처해 알려 주시면 원인을 바로 찾을 수 있습니다.</small></div>
 
 <i class="mk tl"></i><i class="mk tr"></i><i class="mk bl"></i><i class="mk br"></i>
-<script type="module" src="js/main.js?v=4.3.1"></script>
+<script type="module" src="js/main.js?v=4.4.0"></script>
 </body>
 </html>
