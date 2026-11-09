@@ -1,11 +1,11 @@
 // World-space camera routes. Eye heights, doors and lift coordinates follow the scaled model.
 export const EYE_HEIGHT = 1.6;
 const PROFILES = {
-  office: { name: '로비 → 승강기 → 기준층·상층', speed: 0.5, fov: 56, yaw: [-32,-24,-8,14,34,26,8,-10] },
-  neighborhood: { name: '카페 → 승강기 → 기준층·상층', speed: 0.48, fov: 54, yaw: [-36,-26,-12,8,28,18,4,-12] },
-  dormitory: { name: '현관 → 승강기 → 공용층·객실층', speed: 0.46, fov: 56, yaw: [32,24,10,-12,-30,-18,-4,12] },
-  dasedae: { name: '현관 → 승강기 → 세대·상층', speed: 0.44, fov: 54, yaw: [-30,-20,-4,18,32,20,4,-12] },
-  house: { name: '정원 → 거실 → 계단 → 2층', speed: 0.44, fov: 52, yaw: [-40,-28,-12,10,30,18,-6,-20] },
+  office: { name: '로비 → 승강기 → 기준층·상층', speed: 1.1, fov: 56, yaw: [-32,-24,-8,14,34,26,8,-10] },
+  neighborhood: { name: '카페 → 승강기 → 기준층·상층', speed: 1.05, fov: 54, yaw: [-36,-26,-12,8,28,18,4,-12] },
+  dormitory: { name: '현관 → 승강기 → 공용층·객실층', speed: 1, fov: 56, yaw: [32,24,10,-12,-30,-18,-4,12] },
+  dasedae: { name: '현관 → 승강기 → 세대·상층', speed: 0.98, fov: 54, yaw: [-30,-20,-4,18,32,20,4,-12] },
+  house: { name: '정원 → 거실 → 계단 → 2층', speed: 0.98, fov: 52, yaw: [-40,-28,-12,10,30,18,-6,-20] },
 };
 export const motionProfile = T => PROFILES[T.use] || PROFILES.neighborhood;
 export const levelY = (T, n) => (T.structure === 'timber' ? 0.3 : 0) + (n <= 1 ? 0 : T.f1 + (n - 2) * T.ft);
@@ -31,7 +31,7 @@ export function groundVisit(T) {
     const destination = pose([inside.pos[0], inside.pos[1] + off, inside.pos[2]], [inside.look[0], inside.look[1] + off, inside.look[2]]);
     const threshold = pose([x,eye,hd-0.85],[x,eye-0.08,hd-3]);
     const approach=T.frontDoors?.length?entranceApproach(T):[outside,door,threshold];
-    return [...approach, destination, { ...destination, hold: 2.8 }];
+    return [...approach, destination, { ...destination, hold: 1.4 }];
   }
   const core = T.core, door = core.frontDoor1 || core.frontDoor;
   const x = midpoint(door), z = core.z1;
@@ -54,14 +54,14 @@ export function elevatorLeg(T, from = 1, to = 2) {
   return [
     pose(front,[x,a+EYE_HEIGHT+.25,z0],{hold:1.2,lift:lift(a,0,'호출')}),
     pose(front,[x,a+EYE_HEIGHT+.25,z0],{hold:2.4,lift:lift(a,1,'문 열림')}),
-    pose(inside,[x,a+EYE_HEIGHT,z0],{speed:0.38,lift:lift(a,1,'탑승')}),
+    pose(inside,[x,a+EYE_HEIGHT,z0],{speed:0.7,lift:lift(a,1,'탑승')}),
     pose(inside,view(a),{hold:2.8,turnSpeed:0.3,lift:lift(a,1,'탑승')}),
     pose(inside,view(a),{hold:2.4,lift:lift(a,0,'문 닫힘')}),
     pose([x,b+EYE_HEIGHT,z],view(b),{speed:0.85,lift:lift(b,0,'상승')}),
     pose([x,b+EYE_HEIGHT,z],[x,b+EYE_HEIGHT,z1+3],{hold:3,turnSpeed:0.3,lift:lift(b,0,'도착')}),
     pose([x,b+EYE_HEIGHT,z],[x,b+EYE_HEIGHT,z1+3],{hold:2.6,lift:lift(b,1,'문 열림')}),
-    pose([x,b+EYE_HEIGHT,z1+0.7],[x,b+EYE_HEIGHT,hallZ],{speed:0.38,lift:lift(b,1,'하차')}),
-    pose(hall,hallLook,{speed:0.42,lift:lift(b,1,'하차')}),
+    pose([x,b+EYE_HEIGHT,z1+0.7],[x,b+EYE_HEIGHT,hallZ],{speed:0.7,lift:lift(b,1,'하차')}),
+    pose(hall,hallLook,{speed:0.8,lift:lift(b,1,'하차')}),
     pose(hall,hallLook,{dwell:4,
       stop:{kind:'elevator',floor:to,room:'core2',title:`${to}층 도착 · 승강기`,desc:`${from}층에서 ${to}층으로 이동했습니다. 문을 나와 이 층의 실내를 살펴봅니다.`,reveal:['core2']}}),
   ];
@@ -73,7 +73,7 @@ export function buildWalkthrough(T) {
   const original = T.tour.map(k => ({ ...k, pos: [k.pos[0], k.pos[1] + off, k.pos[2]], look: [k.look[0], k.look[1] + off, k.look[2]] }));
   if (!T.core?.ev || T.floors < 2) return original.map(k=>{
     let floor=1;for(let n=2;n<=T.floors;n++)if(k.pos[1]>=levelY(T,n)+EYE_HEIGHT-.2)floor=n;
-    return {...k,floor,dwell:k.stop?6:undefined,stop:k.stop?{...k.stop,floor}:undefined};
+    return {...k,floor,dwell:k.stop?2:undefined,stop:k.stop?{...k.stop,floor}:undefined};
   });
   const c = T.core, cx = (c.ev[0] + c.ev[2]) / 2, doorZ = c.doorEast ? midpoint(c.doorEast) : -1.55;
   const commercial=T.planFloor===1, fd=midpoint(c.frontDoor1||c.frontDoor||[0,0]);
@@ -85,7 +85,7 @@ export function buildWalkthrough(T) {
     const first=initial[0],approach=entranceApproach(T,first.pos[2]);
     initial.splice(0,1,...approach.map((k,i)=>({...k,...(i===0?{stop:first.stop}:{})})));
   }
-  const tag=(k,n)=>({...k,floor:n,dwell:k.stop?6:undefined,stop:k.stop?{...k.stop,floor:n,title:n>2?`${n}층 · ${k.stop.title.replace(/^2층\s*/, '').replace(/20(\d)호/g,`${n}0$1호`)}`:k.stop.title}:undefined});
+  const tag=(k,n)=>({...k,floor:n,dwell:k.stop?2:undefined,stop:k.stop?{...k.stop,floor:n,title:n>2?`${n}층 · ${k.stop.title.replace(/^2층\s*/, '').replace(/20(\d)호/g,`${n}0$1호`)}`:k.stop.title}:undefined});
   const out=initial.map(k=>tag(k,1));
   const corridor=n=>{
     const y=levelY(T,n)+EYE_HEIGHT;

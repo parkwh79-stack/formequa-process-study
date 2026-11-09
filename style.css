@@ -390,3 +390,27 @@ body.walking .tourHead output::after { content: ' · 이동 중'; color: var(--a
 .tour .stabs { max-height:64px;overflow-y:auto; }
 .liftStatus { overflow:hidden;text-overflow:ellipsis; }
 @media(max-width:760px){.liftStatus{font-size:10.5px;padding:9px 12px}.tourActions button{min-height:36px}}
+
+/* Persistent site identity above the study controls. */
+.top { display:block;padding:0;background:rgba(252,251,248,.97);border-bottom:1px solid var(--line);box-shadow:0 3px 18px rgba(36,38,34,.04); }
+.masthead { display:flex;align-items:center;gap:24px;padding:13px var(--g);border-bottom:1px solid var(--line); }
+.masthead .brand { margin-right:auto; }
+.siteNav { display:flex;align-items:center;gap:22px; }
+.siteNav a { color:var(--soft);text-decoration:none;font:500 11px var(--sans);white-space:nowrap; }
+.siteNav a:hover { color:var(--ink);text-decoration:underline;text-underline-offset:4px; }
+.masthead .wan2 { margin:0;padding-left:22px;border-left:1px solid var(--line); }
+.studyToolbar { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 18px;padding:8px var(--g); }
+.studyToolbar .types,.studyToolbar .jumps { min-width:0; }
+@media(max-width:760px){
+  .masthead { gap:14px;padding:12px var(--g); }
+  .masthead .brand { font-size:17px; }
+  .masthead .brand small { display:block;font-size:8px;letter-spacing:0;margin-top:5px; }
+  .siteNav { gap:12px; }
+  .siteNav a { font-size:10px; }
+  .masthead .wan2 { display:none; }
+  .studyToolbar { gap:5px;padding:6px var(--g); }
+  .studyToolbar .types { flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:3px; }
+  .studyToolbar .types button { flex-shrink:0; }
+  .studyToolbar .jumps { width:100%;justify-content:flex-end; }
+  .studyToolbar nav button { padding:5px 8px;font-size:10px; }
+}

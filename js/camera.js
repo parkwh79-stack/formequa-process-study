@@ -127,5 +127,9 @@ export function makeTour(keys, yOff = 0, { speed = 0.48, dwell = 6, turnSpeed = 
     return { pos, look, lift, stopIndex: si, dwell: seg.type === 'dwell' };
   }
   const start = sample(0);
-  return { sample, stops, keys, duration: total, keyU: keys.map((_,i)=>segs.find(s=>s.i===i)?.u0??1), startPos: start.pos.toArray(), startLook: start.look.toArray() };
+  function skipDwell(u,direction){
+    const seg=segs.find(s=>s.type==='dwell'&&u>=s.u0-1e-10&&u<=s.u1+1e-10);
+    return seg?(direction>0?seg.u1:seg.u0):u;
+  }
+  return { sample, skipDwell, stops, keys, duration: total, keyU: keys.map((_,i)=>segs.find(s=>s.i===i)?.u0??1), startPos: start.pos.toArray(), startLook: start.look.toArray() };
 }

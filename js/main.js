@@ -463,6 +463,12 @@ function walkByGesture(pixels,event){
   if(state.jump){state.jump=null;state.target=state.p;motionFollower.reset(state.p);$('sceneTransition').style.opacity=0;}
   const seconds=walkInput(pixels,performance.now());
   event.preventDefault();
+  if(seconds&&state.p>=P.land&&state.p<P.close){
+    const u=tourU(state.p),next=W.tour.skipDwell(u,Math.sign(seconds));
+    if(Math.abs(next-u)>1e-9){
+      state.p=state.target=P.land+next*(P.close-P.land);motionFollower.reset(state.p);
+    }
+  }
   const rate=progressPerSecond(state.p,W.tour.duration);
   scrollToP(queueScrollProgress(state.p,state.target,seconds,rate),false);
   return true;
@@ -566,7 +572,7 @@ function frame(now) {
   }
   if(!state.jump&&!reducedMotion.matches){
     const onFoot=state.p>=P.land||(state.p>=P.entry&&state.p<=P.cut),lift=state.p>=P.land&&W.tour.sample(tourU(state.p)).lift;
-    proposed=limitCameraProgress(state.p,proposed,narrativePose,{angle:16*Math.PI/180*dt,distance:onFoot?(lift?.phase==='상승'?.85:.45)*dt:Infinity,lens:.9*dt});
+    proposed=limitCameraProgress(state.p,proposed,narrativePose,{angle:16*Math.PI/180*dt,distance:onFoot?(lift?.phase==='상승'?.85:1.05)*dt:Infinity,lens:.9*dt});
   }
   state.p=proposed;
   if(state.playing){

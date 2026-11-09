@@ -22,10 +22,10 @@ for(const dt of [1/60,.1,.25])for(const kind of ['turn','walk','lens']){
   for(let t=0;t<5;t+=dt){
     if(t<2)target=queueScrollProgress(current,target,input(1000,t*1000),.05);
     const proposed=follower.step(current,target,dt);
-    current=limitCameraProgress(current,proposed,sample,{angle:16*R*dt,distance:.45*dt,lens:.9*dt});
+    current=limitCameraProgress(current,proposed,sample,{angle:16*R*dt,distance:1.05*dt,lens:.9*dt});
     const pose=sample(current);
     assert.ok(angle(previous.look.clone().sub(previous.pos),pose.look.clone().sub(pose.pos))<=16*R*dt+2e-6,`${kind} at ${1/dt}fps: actual angular speed`);
-    assert.ok(previous.pos.distanceTo(pose.pos)<=.45*dt+1e-7,`${kind}: actual translation speed`);
+    assert.ok(previous.pos.distanceTo(pose.pos)<=1.05*dt+1e-7,`${kind}: actual translation speed`);
     assert.ok(Math.abs(Math.log(Math.tan(pose.fov*R/2)/Math.tan(previous.fov*R/2)))<=.9*dt+1e-7,`${kind}: actual zoom speed`);
     if(t<2)lastInputP=current;
     if(t>4)nearEnd=Math.max(nearEnd,Math.abs(target-current));
@@ -41,6 +41,15 @@ for(const type of ['midsize','geunsaeng'])for(const scale of [.8,.9,1,1.2]){
   const approach=entranceApproach(T,T.tour[0].pos[2]),path=makeTour(approach,0,{speed:profile.speed});
   const full=makeTour(buildWalkthrough(T),0,{speed:profile.speed});
   const lobby=full.stops[1],radius=.18;
+  for(const stop of full.stops){
+    const pose=full.sample(stop.u);
+    for(const direction of [-1,1]){
+      const skipped=full.skipDwell(stop.u,direction),after=full.sample(skipped);
+      assert.ok((skipped-stop.u)*direction>0,'manual scroll leaves a stationary stop immediately');
+      assert.ok(pose.pos.distanceTo(after.pos)<1e-6,'skipping a stop never changes the camera position');
+      assert.ok(angle(pose.look.clone().sub(pose.pos),after.look.clone().sub(after.pos))<1e-5,'skipping a stop never changes the view');
+    }
+  }
   for(let i=0;i<=1200;i++){
     const s=full.sample(lobby.u*i/1200),direction=s.look.clone().sub(s.pos).normalize();
     if(s.pos.z>=hd-1.25){

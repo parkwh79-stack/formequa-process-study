@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.9.0">
+<link rel="stylesheet" href="style.css?v=3.9.1">
 <!-- 오류가 나면 화면에 바로 보여 준다 (모듈 로딩 실패·file:// 실행 등 진단용) -->
 <script>
 (function () {
@@ -26,23 +26,23 @@
 { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
-    "./js/types.js": "./js/types.js?v=3.9.0",
-    "./js/project.js": "./js/project.js?v=3.9.0",
-    "./js/law.js": "./js/law.js?v=3.9.0",
-    "./js/parking.js": "./js/parking.js?v=3.9.0",
-    "./js/camera.js": "./js/camera.js?v=3.9.0",
-    "./js/walkthrough.js": "./js/walkthrough.js?v=3.9.0",
-    "./js/story.js": "./js/story.js?v=3.9.0",
-    "./js/kit.js": "./js/kit.js?v=3.9.0",
-    "./js/building.js": "./js/building.js?v=3.9.0",
-    "./js/interior.js": "./js/interior.js?v=3.9.0",
-    "./js/textures.js": "./js/textures.js?v=3.9.0",
-    "./js/sun.js": "./js/sun.js?v=3.9.0",
-    "./js/ui.js": "./js/ui.js?v=3.9.0",
-    "./js/elevator.js": "./js/elevator.js?v=3.9.0",
-    "./js/scroll-motion.js": "./js/scroll-motion.js?v=3.9.0",
-    "./js/access.js": "./js/access.js?v=3.9.0",
-    "./js/rect-patches.js": "./js/rect-patches.js?v=3.9.0"
+    "./js/types.js": "./js/types.js?v=3.9.1",
+    "./js/project.js": "./js/project.js?v=3.9.1",
+    "./js/law.js": "./js/law.js?v=3.9.1",
+    "./js/parking.js": "./js/parking.js?v=3.9.1",
+    "./js/camera.js": "./js/camera.js?v=3.9.1",
+    "./js/walkthrough.js": "./js/walkthrough.js?v=3.9.1",
+    "./js/story.js": "./js/story.js?v=3.9.1",
+    "./js/kit.js": "./js/kit.js?v=3.9.1",
+    "./js/building.js": "./js/building.js?v=3.9.1",
+    "./js/interior.js": "./js/interior.js?v=3.9.1",
+    "./js/textures.js": "./js/textures.js?v=3.9.1",
+    "./js/sun.js": "./js/sun.js?v=3.9.1",
+    "./js/ui.js": "./js/ui.js?v=3.9.1",
+    "./js/elevator.js": "./js/elevator.js?v=3.9.1",
+    "./js/scroll-motion.js": "./js/scroll-motion.js?v=3.9.1",
+    "./js/access.js": "./js/access.js?v=3.9.1",
+    "./js/rect-patches.js": "./js/rect-patches.js?v=3.9.1"
 } }
 </script>
 </head>
@@ -52,7 +52,15 @@
 <div class="track" aria-hidden="true"></div>
 
 <header class="top">
-  <a class="brand" href="https://formequa-research.web.app/#home" target="_blank" rel="noopener">FORMEQUA<small>Process Study · 도면에서 준공까지</small></a>
+  <div class="masthead">
+    <a class="brand" href="/" aria-label="FORMEQUA Process Study 홈">FORMEQUA<small>PROCESS STUDY · 도면에서 준공까지</small></a>
+    <nav class="siteNav" aria-label="사이트 메뉴">
+      <a href="https://formequa-research.web.app/#home" target="_blank" rel="noopener">FORMEQUA 소개 ↗</a>
+      <a href="https://github.com/parkwh79-stack/formequa-process-study" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+    <a class="wan2" href="https://wan2-website.web.app/" target="_blank" rel="noopener"><small>POWERED BY</small>WAN2 ↗</a>
+  </div>
+  <div class="studyToolbar">
   <nav class="types" aria-label="건물 유형">
     <button data-type="midsize">중소형 빌딩</button>
     <button data-type="geunsaeng">근생 빌딩</button>
@@ -72,7 +80,7 @@
     <button id="hq" title="물리 하늘·앰비언트 오클루전">고품질</button>
     <button id="estBtn" class="solid">법규·공사비 산정</button>
   </nav>
-  <a class="wan2" href="https://wan2-website.web.app/" target="_blank" rel="noopener"><small>POWERED BY</small>WAN2 ↗</a>
+  </div>
 </header>
 
 <section class="hero">
@@ -160,6 +168,6 @@
 <div class="err" id="err"><b>실행 중 문제가 생겼습니다</b><pre></pre><small>이 내용을 캡처해 알려 주시면 원인을 바로 찾을 수 있습니다.</small></div>
 
 <i class="mk tl"></i><i class="mk tr"></i><i class="mk bl"></i><i class="mk br"></i>
-<script type="module" src="js/main.js?v=3.9.0"></script>
+<script type="module" src="js/main.js?v=3.9.1"></script>
 </body>
 </html>

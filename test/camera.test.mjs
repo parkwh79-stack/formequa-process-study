@@ -83,7 +83,7 @@ for (const key of Object.keys(TYPES)) {
     prev = s.pos;prevDir=dir;
   }
   assert.ok(maxSpeed < 2.1, `${key}: no flight between waypoints (${maxSpeed} m/s)`);
-  assert.ok(maxWalkSpeed<.6,`${key}: slow indoor walking (${maxWalkSpeed})`);
+  assert.ok(maxWalkSpeed>.7&&maxWalkSpeed<1.05,`${key}: responsive indoor walking (${maxWalkSpeed})`);
   assert.ok(maxTurn<.31,`${key}: measured head turns (${maxTurn} rad/s)`);
   const camera = new THREE.PerspectiveCamera();
   setCam(camera, poseToKey(tour.startPos, tour.startLook, profile.fov));
