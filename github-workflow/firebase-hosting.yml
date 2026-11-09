@@ -1,0 +1,53 @@
+# GitHub → Firebase Hosting 자동 배포
+# main에 push: 테스트 → 빌드 → https://formequa-process-study.web.app (live)
+# Pull request: 같은 검사 후 7일짜리 미리보기 채널 주소를 PR 댓글로 남김
+# 필요한 저장소 Secret: FIREBASE_SERVICE_ACCOUNT_FORMEQUA_PROCESS_STUDY (서비스 계정 JSON 전체)
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+concurrency:
+  group: firebase-hosting-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run build
+
+      - name: Preview channel (pull request)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FORMEQUA_PROCESS_STUDY }}
+          projectId: formequa-process-study
+          target: study
+          expires: 7d
+
+      - name: Live (main)
+        if: github.event_name != 'pull_request'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FORMEQUA_PROCESS_STUDY }}
+          projectId: formequa-process-study
+          target: study
+          channelId: live
