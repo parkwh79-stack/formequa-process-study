@@ -930,8 +930,16 @@ function startMobile() {
   state.intro = 1; state.p = state.target = 0; scrollToP(0, false); setPlaying(true);
 }
 if (MOBILE && FIXED_P == null) {
-  $('mIntro').hidden = false; let n = 3; $('mCount').textContent = n;
-  state.mCountdown = setInterval(() => { n -= 1; $('mCount').textContent = Math.max(0, n); if (n <= 0) startMobile(); }, 1000);
+  // v4.2.1: the PC recommendation stays for 4.4 s (counted down in tenths), then playback starts.
+  // The count starts once the first frame is on screen, so slow phones still show the card for the full 4.4 s.
+  const MINTRO_MS = 4400; $('mIntro').hidden = false; $('mCount').textContent = (MINTRO_MS / 1000).toFixed(1);
+  const begin = () => {
+    if (!window.__ksReady) { requestAnimationFrame(begin); return; }
+    if ($('mIntro').hidden) return;
+    const t0 = performance.now();
+    state.mCountdown = setInterval(() => { const left = Math.max(0, MINTRO_MS - (performance.now() - t0)); $('mCount').textContent = (left / 1000).toFixed(1); if (left <= 0) startMobile(); }, 100);
+  };
+  requestAnimationFrame(begin);
   $('mStart').addEventListener('click', startMobile);
 }
 $('mPlay').addEventListener('click', () => { if (!state.playing && state.p >= 0.999) { state.p = state.target = 0; scrollToP(0, false); } setPlaying(!state.playing); });
