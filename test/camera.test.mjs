@@ -37,7 +37,7 @@ for(let p=0;p<=1;p+=.001)near(scrollToStory(storyToScroll(p)),p,'scroll and stor
 near(storyToScroll(P.close)-storyToScroll(P.land),.6,'60% of scroll track belongs to interior');
 const wheel=createWalkInput();let walked=0;
 for(let ms=0;ms<=5000;ms+=16)walked+=wheel(1000,ms);
-assert.ok(walked<=5.36,'large wheel bursts cannot queue a fast multi-second flight');
+assert.ok(walked>30&&walked<=31.6,'sustained wheel input runs at about 6x route time while keeping a bounded budget');
 near(wheel(0,5100),0,'no route progress without input');
 assert.ok(wheel(-1000,5500)<0,'reverse scroll reverses walking');
 let frontSeconds=0;
@@ -63,6 +63,7 @@ for (const key of Object.keys(TYPES)) {
   if(T.core)for(const n of visitFloors(T))assert.ok(tour.stops.some(s=>s.floor===n&&s.kind!=='elevator'),`${key}: real interior visit on floor ${n}`);
   for (let i = 0; i <= 12000; i++) {
     const s = tour.sample(i / 12000);
+    assert.equal(s.dwell,false,`${key}: automatic playback never dwells at room markers`);
     for (const v of [...s.pos.toArray(), ...s.look.toArray()]) assert.ok(Number.isFinite(v), `${key}: finite pose`);
     near(s.pos.distanceTo(s.look), 3, `${key}: stable viewing direction`);
     if (prev) maxSpeed = Math.max(maxSpeed, prev.distanceTo(s.pos) / (tour.duration / 12000));
