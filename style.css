@@ -414,3 +414,6 @@ body.walking .tourHead output::after { content: ' · 이동 중'; color: var(--a
   .studyToolbar .jumps { width:100%;justify-content:flex-end; }
   .studyToolbar nav button { padding:5px 8px;font-size:10px; }
 }
+
+/* v3.9.3 — inner panels keep their own wheel; never chain into the page scroll that drives the camera */
+.estBody, .closing, .tour .stabs { overscroll-behavior: contain; }
