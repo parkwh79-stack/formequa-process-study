@@ -34,6 +34,10 @@ const q = new URLSearchParams(location.search);
 const FIXED_P = q.has('p') ? parseFloat(q.get('p')) : null;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const $ = id => document.getElementById(id);
+// v4.2: phones and tablets get a video-like version (autoplay, minimal text). ?mobile / ?desktop override.
+const MOBILE = new URLSearchParams(location.search).has('mobile') || (!new URLSearchParams(location.search).has('desktop') &&
+  matchMedia('(max-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1100px)').matches);
+document.documentElement.classList.toggle('mobile', MOBILE); document.body.classList.toggle('mobile', MOBILE);
 const weekAt = p => clamp01((p - P.lawEnd) / (P.buildEnd - P.lawEnd)) * PRJ.WEEKS;     // 법규 장면이 끝나야 착공
 const pAtWeek = w => P.lawEnd + (w / PRJ.WEEKS) * (P.buildEnd - P.lawEnd);
 const lawU = p => clamp01((p - P.open) / (P.lawEnd - P.open));                         // 법규 장면 진행도 0~1
@@ -199,11 +203,12 @@ function buildWorld() {
   const start = poseToKey(tour.startPos, tour.startLook, FOV_WALK());
   const lawYaw = motionProfile(T).yaw[0];
   // v4.1: the law card covers the left of the screen; frame the site in the free area to its right.
-  const lawFrac = () => innerWidth > 760 ? (Math.min(380, innerWidth - 32) + 28) / innerWidth : 0;
+  const lawFrac = () => !MOBILE && innerWidth > 760 ? (Math.min(380, innerWidth - 32) + 28) / innerWidth : 0;
   const lawKey = k => { const f = lawFrac(); return { ...k, viewShiftX: -f / 2, minW: k.minW / Math.max(0.5, 1 - f) }; };
   const mkKeys = () => [
-    { p: 0, t: [-siteW * 0.34, H * 0.5 - elevFh * 0.12, 0], fh: elevFh, fov: 2, minW: siteW * 1.75 },        // 입면도: 왼쪽 글 자리를 비우고 건물을 오른쪽에
-    { p: P.flat, t: [-siteW * 0.34, H * 0.5 - elevFh * 0.12, 0], fh: elevFh, fov: 2, minW: siteW * 1.75 },
+    // 입면도: 왼쪽 글 자리를 비우고 건물을 오른쪽에. v4.2 모바일은 글이 없으므로 가운데에 크게.
+    { p: 0, t: MOBILE ? [0, H * 0.5, 0] : [-siteW * 0.34, H * 0.5 - elevFh * 0.12, 0], fh: MOBILE ? H * 1.5 : elevFh, fov: 2, minW: MOBILE ? Math.max(T.W * 1.25, siteW * 0.9) : siteW * 1.75 },
+    { p: P.flat, t: MOBILE ? [0, H * 0.5, 0] : [-siteW * 0.34, H * 0.5 - elevFh * 0.12, 0], fh: MOBILE ? H * 1.5 : elevFh, fov: 2, minW: MOBILE ? Math.max(T.W * 1.25, siteW * 0.9) : siteW * 1.75 },
     // v4.0 (flat-to-3d 07): the lens opens with the camera almost level, then one slow rise over the law steps.
     // Same frame size throughout, pitch only grows (14 → 22 → 28 → 34°): the height rises once. Yaw drifts one way.
     lawKey({ p: P.open, t: [0, H * 0.18, 0], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.3, pitch: 14, minW: siteW * 1.8 }),
@@ -454,6 +459,7 @@ function setPlaying(on, buildOnly = false) {
   else {state.seeking=false;state.target=state.p;state.jump=null;}
   $('play').classList.toggle('on', on); $('play').setAttribute('aria-pressed', String(on));
   $('play').textContent = on ? '❚❚ 정지' : '▶ 자동 재생';
+  $('mPlay').textContent = on ? '❚❚' : '▶';
   $('tourPlay').textContent = on ? '❚❚ 일시정지' : '▶ 층별 투어';
   $('tourPlay').setAttribute('aria-pressed',String(on));
   $('buildPlay').setAttribute('aria-pressed', String(on && buildOnly));
@@ -518,7 +524,7 @@ addEventListener('wheel', e => {
   setPlaying(false);state.seeking=false;state.scrollSyncUntil=0;
   if(document.body.classList.contains('estOpen')&&!scrollsNatively(e.target,e.deltaY,document.body))e.preventDefault();
 }, { passive: false });
-addEventListener('touchstart', () => { setPlaying(false);state.seeking=false;state.scrollSyncUntil=0; }, { passive: true });
+addEventListener('touchstart', e => { if (e.target.closest?.('.mBar, .mIntro')) return; setPlaying(false);state.seeking=false;state.scrollSyncUntil=0; }, { passive: true });
 addEventListener('keydown', e => { if(/^(ArrowUp|ArrowDown|PageUp|PageDown|Home|End)$/.test(e.key)){setPlaying(false);state.scrollSyncUntil=0;} });
 document.addEventListener('visibilitychange', () => { if (document.hidden) setPlaying(false); });
 document.addEventListener('focusin', e => { if (e.target.matches('input, select, textarea')) setPlaying(false); });
@@ -586,6 +592,35 @@ const dirName = az => ['남', '남서', '서', '북서', '북', '북동', '동',
 const v3 = new THREE.Vector3();
 let last = performance.now();
 
+// Short glass notes slide up only where an explanation is needed (chapter starts, emphasised spaces, lift).
+const firstSentence = t => (t || '').split(/(?<=[.。])\s/)[0];
+const MNOTES = [
+  () => ['입면도', '2° 망원으로 본 입면 — 곧 3D가 됩니다.'],
+  () => ['선에서 재료로', '스캔이 지나가면 선이 재료가 됩니다.'],
+  () => { const F = PRJ.fit; return ['대지 · 법규', `${F.z?.name || ''} · ${F.n}층 · 지상 연면적 ${Math.round(F.m.farArea).toLocaleString()}㎡ · 주차 ${PRJ.park?.R?.req ?? '-'}대`]; },
+  () => ['공정 · 자금', `${Math.round(PRJ.WEEKS)}주 공정 · 총공사비 ${PRJ.est?.total?.toFixed(1) ?? '-'}억 원`],
+  () => ['준공', '해가 움직이면 그림자도 함께 움직입니다.'],
+  () => ['단면', '눈높이에서 1층 단면을 읽습니다.'],
+  () => ['입구 · 1층', '1층으로 먼저 들어갑니다.'],
+  () => ['평면도', '천장이 걷히고, 방금 본 공간이 평면이 됩니다.'],
+  null,
+  () => ['실내', `${W.tour.stops.length}개 공간 · 기준층은 한 번만 둘러봅니다.`],
+  null,
+];
+function showNote(title, text) {
+  $('mNoteT').textContent = title; $('mNoteD').textContent = text || '';
+  $('mNote').classList.add('on'); clearTimeout(state.mNoteTimer);
+  state.mNoteTimer = setTimeout(() => $('mNote').classList.remove('on'), 3400);
+}
+function mobileNotes(p) {
+  const ch = chapterAt(p);
+  if (ch !== state.mChap) { state.mChap = ch; $('mChap').textContent = CHAPTERS[ch].title; const n = MNOTES[ch]?.(); if (n && $('mIntro').hidden) showNote(...n); }
+  if (p >= P.land && state.lastStop !== state.mStop) {
+    state.mStop = state.lastStop; const s = W.tour.stops[state.lastStop];
+    if (s && (s.emphasis || s.kind === 'elevator')) showNote(s.title, firstSentence(s.desc));
+  }
+  $('mProgFill').style.width = `${(p * 100).toFixed(1)}%`;
+}
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.25, (now - last) / 1000); last = now;
@@ -617,6 +652,7 @@ function frame(now) {
   const p = state.p, T = PRJ.T, t = weekAt(p), u = tourU(p);
   if(Math.abs(p-previousP)>1e-9)state.travelDir=Math.sign(p-previousP);
   if (Math.abs(p - (state.journeyP ?? -1)) > 0.0005 || state.dirty) { updateJourney(p); state.journeyP = p; }
+  if (MOBILE) mobileNotes(p);
   const inTour = p >= P.land;
   document.body.classList.toggle('walking', inTour && Math.abs(state.p-previousP) > 1e-9 && !W.tour.sample(u).dwell);
 
@@ -888,5 +924,18 @@ buildWorld();
 if (FIXED_P != null) document.documentElement.classList.add('fixed');
 if (q.has('est')) document.body.classList.add('estOpen');
 { let open = false; try { open = localStorage.getItem('fqDrawer') === 'open'; } catch (e) { /* storage unavailable */ } setTourFocus(!open); }
+// ── v4.2 mobile: start screen recommends the PC version, then plays like a video ──
+function startMobile() {
+  clearInterval(state.mCountdown); $('mIntro').hidden = true;
+  state.intro = 1; state.p = state.target = 0; scrollToP(0, false); setPlaying(true);
+}
+if (MOBILE && FIXED_P == null) {
+  $('mIntro').hidden = false; let n = 3; $('mCount').textContent = n;
+  state.mCountdown = setInterval(() => { n -= 1; $('mCount').textContent = Math.max(0, n); if (n <= 0) startMobile(); }, 1000);
+  $('mStart').addEventListener('click', startMobile);
+}
+$('mPlay').addEventListener('click', () => { if (!state.playing && state.p >= 0.999) { state.p = state.target = 0; scrollToP(0, false); } setPlaying(!state.playing); });
+$('mType').value = PRJ.key;
+$('mType').addEventListener('change', e => { switchType(e.target.value); state.mChap = -1; setPlaying(true); });
 requestAnimationFrame(frame);
 window.__ks = { state, PRJ, get W() { return W; }, switchType, camera, renderer, THREE, narrativePose, P };
