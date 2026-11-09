@@ -461,7 +461,7 @@ body.tourOn .tourDrawer { pointer-events: auto; }
 /* ── v4.2 모바일: 설명은 숨기고 화면을 크게, 영상처럼 자동 재생 ───────────────────────── */
 .mIntro, .mNote, .mBar { display: none; }
 html.mobile { --dockH: 0.01px; }
-body.mobile :is(.tb, .hero, .journey, .beat, .status, .lawcard, .readout, .card, .dock, .tod, .tour, .tourDrawer, .radar, .liftStatus, .sweepLabel, #pins, #plabels, .planTitle, .studyToolbar, .siteNav, .wan2, .scan) { display: none !important; }
+body.mobile :is(.tb, .hero, .journey, .beat, .status, .lawcard, .readout, .card, .dock, .tod, .tour, .tourDrawer, .radar, .liftStatus, .sweepLabel, #pins, #plabels, .planTitle, .studyToolbar, .siteNav, .scan) { display: none !important; }
 body.mobile .top { background: transparent; border: 0; box-shadow: none; pointer-events: none; }
 body.mobile .top .brand { pointer-events: auto; }
 body.mobile .mBar { display: flex; position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
@@ -513,3 +513,9 @@ body.tablet .tourDrawer { width: min(420px, 46vw); }
   body.tablet .fin { display: none; }       /* 세로: 공정표를 화면 폭 가득 */
   body.tablet .readout { display: none; }
 }
+
+/* ── v4.3.1 휴대폰·패드·탭에서도 오른쪽 위 POWERED BY WAN2 (링크 유지) ───────────────────── */
+body:is(.mobile, .tablet) .masthead .wan2 { display: flex !important; pointer-events: auto; margin-left: auto; }
+body.mobile .masthead .wan2 { padding: 6px 0 6px 14px; font-size: 13px; background: none; }
+body.mobile .masthead .wan2 small { font-size: 7.5px; }
+body.tablet .masthead .wan2 { min-height: 42px; justify-content: center; }
