@@ -13,7 +13,7 @@
 html, body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); }
 html.fixed { overflow: hidden; }
 #gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
-.track { height: 1700vh; }
+.track { height: 2400vh; }   /* v4.0: native scroll — longer track, closer to flat-to-3d pacing */
 #sceneTransition { position:fixed;inset:0;z-index:3;background:var(--paper);opacity:0;pointer-events:none; }
 button { font-family: var(--sans); cursor: pointer; }
 
