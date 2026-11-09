@@ -8,6 +8,7 @@
   - **사진 헤더**: `og-image.png`(1200×630). 중소형 빌딩 2° 망원 입면도와 "From drawing to site.", 소개 문구, 주제 칩, 주소, POWERED BY WAN2를 담았습니다.
   - **설명 헤더**: 제목 "FORMEQUA — From drawing to site. 도면에서 준공까지"와 한 줄 설명
 - 미리보기 이미지는 배포 때마다 GitHub Actions에서 새로 만듭니다: `scripts/og-image.mjs`가 빌드된 사이트를 띄워 실제 입면 렌더를 찍고, `og/card.html` 카드에 넣어 `dist/og-image.png`로 저장합니다. 이 단계가 실패해도 배포는 계속됩니다.
+  - CI는 러너에 설치된 Chrome과 `playwright-core`를 씁니다(Ubuntu 26.04 러너에서 `playwright install --with-deps`가 실패해 바꿨습니다).
   - 저장소 루트에 `og-image.png`가 있으면 빌드가 그것을 `dist/`로 먼저 복사합니다(PC 폴더에는 미리 만든 사본이 있습니다).
   - 오프라인 확인: `OG_THREE_DIR=node_modules/three node scripts/og-image.mjs` (CDN 대신 로컬 three.js 사용, Playwright 필요)
 - 카카오톡은 미리보기를 한동안 캐시합니다. 예전 미리보기가 계속 보이면 카카오 공유 디버거(developers.kakao.com/tool/debugger/sharing)에서 주소를 넣고 "캐시 초기화"를 누릅니다.
