@@ -1,10 +1,11 @@
 // Renders the link-preview image (og:image, 1200×630) into dist/og-image.png.
 // 1) serves dist/, renders the real 2° elevation of the mid-size building, 2) places it in og/card.html.
-// Runs in GitHub Actions after `npm run build` (needs `playwright` + Chromium). Usage: node scripts/og-image.mjs
+// Runs in GitHub Actions after `npm run build` with playwright-core and the runner's Chrome (OG_CHROME=<path>).
+// Usage: node scripts/og-image.mjs   (local: `playwright` or `playwright-core` + any Chromium)
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { chromium } from 'playwright';
+const { chromium } = await import('playwright-core').catch(() => import('playwright'));
 
 const root = path.resolve('dist'), port = 4173;
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
@@ -15,7 +16,7 @@ const server = http.createServer(async (req, res) => {
   catch { res.writeHead(404); res.end(); }
 }).listen(port);
 
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const browser = await chromium.launch({ executablePath: process.env.OG_CHROME || undefined, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 try {
   const page = await browser.newPage({ viewport: { width: 600, height: 630 }, deviceScaleFactor: 2 });
   // Offline testing only: OG_THREE_DIR=<node_modules/three> serves three.js from disk instead of the CDN.
