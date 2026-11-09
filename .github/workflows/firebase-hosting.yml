@@ -32,6 +32,14 @@ jobs:
       - run: npm test
       - run: npm run build
 
+      - name: Link preview image (og-image.png)
+        continue-on-error: true
+        timeout-minutes: 10
+        run: |
+          npm i --no-save --ignore-scripts playwright@1.48.2
+          npx playwright install --with-deps chromium
+          node scripts/og-image.mjs
+
       - name: Preview channel (pull request)
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         uses: FirebaseExtended/action-hosting-deploy@v0
