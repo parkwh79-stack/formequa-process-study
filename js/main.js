@@ -34,10 +34,19 @@ const q = new URLSearchParams(location.search);
 const FIXED_P = q.has('p') ? parseFloat(q.get('p')) : null;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const $ = id => document.getElementById(id);
-// v4.2: phones and tablets get a video-like version (autoplay, minimal text). ?mobile / ?desktop override.
-const MOBILE = new URLSearchParams(location.search).has('mobile') || (!new URLSearchParams(location.search).has('desktop') &&
-  matchMedia('(max-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1100px)').matches);
-document.documentElement.classList.toggle('mobile', MOBILE); document.body.classList.toggle('mobile', MOBILE);
+// v4.3: three layouts. A touch device is classified by its shortest screen side, so turning it never
+// switches layout: phones (< 600 px) get the video-like mobile view, pads and tabs (≥ 600 px) get a
+// touch view close to the PC version. ?mobile / ?tablet / ?desktop override.
+const VIEW = (() => {
+  const u = new URLSearchParams(location.search);
+  if (u.has('mobile')) return 'mobile'; if (u.has('tablet')) return 'tablet'; if (u.has('desktop')) return 'desktop';
+  const touch = matchMedia('(hover: none) and (pointer: coarse)').matches || (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.platform));
+  const shortSide = Math.min(screen.width, screen.height);
+  if (touch) return shortSide >= 600 ? 'tablet' : 'mobile';
+  return innerWidth <= 760 ? 'mobile' : 'desktop';
+})();
+const MOBILE = VIEW === 'mobile', TABLET = VIEW === 'tablet', AUTOPLAY_START = MOBILE || TABLET;
+for (const el of [document.documentElement, document.body]) { el.classList.toggle('mobile', MOBILE); el.classList.toggle('tablet', TABLET); }
 const weekAt = p => clamp01((p - P.lawEnd) / (P.buildEnd - P.lawEnd)) * PRJ.WEEKS;     // 법규 장면이 끝나야 착공
 const pAtWeek = w => P.lawEnd + (w / PRJ.WEEKS) * (P.buildEnd - P.lawEnd);
 const lawU = p => clamp01((p - P.open) / (P.lawEnd - P.open));                         // 법규 장면 진행도 0~1
@@ -923,13 +932,17 @@ resize();
 buildWorld();
 if (FIXED_P != null) document.documentElement.classList.add('fixed');
 if (q.has('est')) document.body.classList.add('estOpen');
-{ let open = false; try { open = localStorage.getItem('fqDrawer') === 'open'; } catch (e) { /* storage unavailable */ } setTourFocus(!open); }
+{ let open = TABLET; try { const v = localStorage.getItem('fqDrawer'); if (v) open = v === 'open'; } catch (e) { /* storage unavailable */ } setTourFocus(!open); }
 // ── v4.2 mobile: start screen recommends the PC version, then plays like a video ──
 function startMobile() {
   clearInterval(state.mCountdown); $('mIntro').hidden = true;
   state.intro = 1; state.p = state.target = 0; scrollToP(0, false); setPlaying(true);
 }
-if (MOBILE && FIXED_P == null) {
+if (TABLET) {   // richer text than the phone: the PC panels stay, so the card only mentions what the PC adds
+  $('mIntro').querySelector('p:not(.mK):not(.mSub)').innerHTML = '<b>PC에서 보시길 권장합니다.</b> PC에서는 공사비·자금 산정 패널을 직접 조정할 수 있습니다.';
+  $('mIntro').querySelector('.mSub').textContent = '태블릿에서는 자동으로 재생되며, 법규·공정표·실내 설명이 함께 나옵니다. 화면을 만지면 멈추고, ▶ 자동 재생으로 다시 이어집니다.';
+}
+if (AUTOPLAY_START && FIXED_P == null) {
   // v4.2.2: the PC recommendation stays for 4.44 s (counted down in hundredths), then playback starts.
   // The count starts once the first frame is on screen, so slow phones still show the card for the full time.
   const MINTRO_MS = 4440; $('mIntro').hidden = false; $('mCount').textContent = (MINTRO_MS / 1000).toFixed(2);

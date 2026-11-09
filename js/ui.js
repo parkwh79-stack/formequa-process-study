@@ -30,7 +30,7 @@ export function ganttSVG(t, W, H) {
     const live = t >= p.w0 && t < p.w1, done = t >= p.w1, fill = clamp01((t - p.w0) / (p.w1 - p.w0));
     const delayed = PRJ.opts.delayWeeks > 0 && PRJ.opts.delayKey === p.key;
     s += `<g><title>${p.name} · ${p.w0.toFixed(1)}~${p.w1.toFixed(1)}주 · ${won(est.lines[p.key] || 0)}</title>`;
-    s += txt(0, by + bh - 1, `${p.code} ${p.name}`, { size: rowH > 15 ? 10.5 : 9, w: live ? 700 : 500, fill: live ? 'var(--accent)' : done ? 'rgba(29,28,25,.9)' : 'rgba(29,28,25,.55)' });
+    s += txt(0, by + bh - 1, `${p.code} ${p.name}`, { size: rowH > 21 ? 13 : rowH > 15 ? 10.5 : 9, w: live ? 700 : 500, fill: live ? 'var(--accent)' : done ? 'rgba(29,28,25,.9)' : 'rgba(29,28,25,.55)' });
     s += `<rect x="${X(p.w0)}" y="${by}" width="${Math.max(1, X(p.w1) - X(p.w0))}" height="${bh}" fill="url(#hatch)" stroke="${delayed ? 'var(--accent)' : 'rgba(29,28,25,.5)'}" stroke-width="${delayed ? 2 : 1}" ${delayed ? 'stroke-dasharray="3 2"' : ''}/>`;
     if (fill > 0) s += `<rect x="${X(p.w0)}" y="${by}" width="${(X(p.w1) - X(p.w0)) * fill}" height="${bh}" fill="${live ? 'var(--accent)' : 'var(--ink)'}" opacity="${live ? 0.95 : 0.78}"/>`;
     s += `</g>`;
