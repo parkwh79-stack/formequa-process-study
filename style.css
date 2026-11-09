@@ -457,3 +457,35 @@ body.tourOn .tourDrawer { pointer-events: auto; }
   @keyframes sheetIn { from { opacity: 0; transform: translateY(14px); } to { opacity: var(--tour); transform: none; } }
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass { background: rgba(250,248,243,.94); } }
+
+/* ── v4.2 모바일: 설명은 숨기고 화면을 크게, 영상처럼 자동 재생 ───────────────────────── */
+.mIntro, .mNote, .mBar { display: none; }
+html.mobile { --dockH: 0.01px; }
+body.mobile :is(.tb, .hero, .journey, .beat, .status, .lawcard, .readout, .card, .dock, .tod, .tour, .tourDrawer, .radar, .liftStatus, .sweepLabel, #pins, #plabels, .planTitle, .studyToolbar, .siteNav, .wan2, .scan) { display: none !important; }
+body.mobile .top { background: transparent; border: 0; box-shadow: none; pointer-events: none; }
+body.mobile .top .brand { pointer-events: auto; }
+body.mobile .mBar { display: flex; position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 8; align-items: center; gap: 10px; padding: 8px 10px; }
+.mBar button, .mBar select { min-height: 40px; font: 500 12px var(--sans); color: var(--ink); background: rgba(255,255,255,.5); border: 1px solid rgba(36,38,34,.14); border-radius: 10px; }
+.mBar #mPlay { width: 44px; flex: none; font-size: 14px; }
+.mBar select { flex: none; max-width: 38%; padding: 0 8px; }
+.mInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mInfo output { font: 600 12px var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mProg { height: 3px; border-radius: 3px; background: rgba(36,38,34,.14); overflow: hidden; }
+.mProg i { display: block; height: 100%; width: 0; background: var(--accent); }
+body.mobile .mNote { display: block; position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 7; padding: 12px 14px; pointer-events: none;
+  transform: translateY(calc(100% + 110px)); opacity: 0; transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s; }
+body.mobile .mNote.on { transform: none; opacity: 1; }
+.mNote b { display: block; font: 400 22px/1.15 var(--serif); margin-bottom: 4px; }
+.mNote span { display: block; font: 400 12.5px/1.55 var(--sans); color: rgba(36,38,34,.82); }
+body.mobile .mIntro:not([hidden]) { display: flex; flex-direction: column; gap: 10px; position: fixed; left: 50%; top: 50%; translate: -50% -50%; z-index: 9;
+  width: min(360px, calc(100vw - 32px)); padding: 22px 20px 18px; }
+.mIntro .mK { margin: 0; font: 600 10px var(--mono); letter-spacing: .1em; color: var(--accent); }
+.mIntro h2 { margin: 0; font: 400 34px/1 var(--serif); letter-spacing: -.02em; }
+.mIntro h2 em { color: var(--olive, #707960); }
+.mIntro p { margin: 0; font: 400 13px/1.6 var(--sans); }
+.mIntro .mSub { color: rgba(36,38,34,.7); font-size: 12px; }
+.mIntro button { margin-top: 6px; min-height: 46px; font: 600 14px var(--sans); color: var(--paper); background: var(--ink); border: 0; border-radius: 10px; }
+.mIntro button span { opacity: .6; margin-left: 6px; }
+body.mobile .closing { max-height: calc(100vh - 140px); }
