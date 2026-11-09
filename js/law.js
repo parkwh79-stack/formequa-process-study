@@ -73,13 +73,14 @@ export function check(T, law, s, n) {
   const north = z.sun ? sunReq(m.height) : sb.side;
   const needD = front + m.D + north, needW = m.W + 2 * sb.side;
   const park = parkingCheck(T, m, law);
+  if (park.L.kind === 'mech') { m.below = m.plate * park.L.levels; m.gfa = m.farArea + m.below; }   // v4.1: 지하 주차층 수만큼
   const rows = [
     { k: 'bcr', name: '건폐율', plan: m.plate / site * 100, max: z.bcr, unit: '%', ok: m.plate / site * 100 <= z.bcr + 1e-6 },
     { k: 'far', name: '용적률', plan: m.farArea / site * 100, max: z.far, unit: '%', ok: m.farArea / site * 100 <= z.far + 1e-6 },
     { k: 'sun', name: z.sun ? '정북 일조 이격' : '후면 이격', plan: law.siteD - front - m.D, max: north, unit: 'm', ok: needD <= law.siteD + 1e-6, minRule: true },
     { k: 'open', name: '대지 폭 (측면 공지 포함)', plan: law.siteW, max: needW, unit: 'm', ok: needW <= law.siteW + 1e-6, minRule: true },
   ];
-  // 주차 (parking.js): 필로티·옥외는 필수, 지하 기계식은 층 추가로 해결 가능해 '권고'
+  // 주차 (parking.js): 모든 배치가 필수 (v4.1: 지하 기계식도 법정 대수를 채울 때까지 지하층 추가)
   rows.push(park.row);
   if (T.use === 'dasedae') rows.push(
     { k: 'dasedae', name: '주택 층수', plan: m.houseFloors, max: 4, unit: '개층', ok: m.houseFloors <= 4 },

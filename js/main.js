@@ -106,7 +106,9 @@ const FOV_WALK = () => motionProfile(PRJ.T).fov + (innerWidth / innerHeight < 0.
 function narrativePose(p){
   if(p>=P.land)return {...W.tour.sample(tourU(p)),fov:FOV_WALK()};
   if(p>=P.entry&&p<=P.cut){
-    const u=p<=P.ground?(p-P.entry)/(P.ground-P.entry):1-(p-P.ground)/(P.cut-P.ground);
+    // v4.1: no walking backwards out of the building. The visit ends standing in the room; from there the
+    // ceiling lifts off, the walls drop to the 1.2 m plan cut and the camera rises straight into the plan.
+    const u=p<=P.ground?(p-P.entry)/(P.ground-P.entry):1;
     return {...W.groundTour.sample(u),fov:FOV_WALK()};
   }
   return framePose(camAt(p,W.KEYS,camera.aspect));
@@ -196,22 +198,25 @@ function buildWorld() {
   const elevFh = H * 1.9, big = Math.max(H, siteW * 0.6);
   const start = poseToKey(tour.startPos, tour.startLook, FOV_WALK());
   const lawYaw = motionProfile(T).yaw[0];
+  // v4.1: the law card covers the left of the screen; frame the site in the free area to its right.
+  const lawFrac = () => innerWidth > 760 ? (Math.min(380, innerWidth - 32) + 28) / innerWidth : 0;
+  const lawKey = k => { const f = lawFrac(); return { ...k, viewShiftX: -f / 2, minW: k.minW / Math.max(0.5, 1 - f) }; };
   const mkKeys = () => [
     { p: 0, t: [-siteW * 0.34, H * 0.5 - elevFh * 0.12, 0], fh: elevFh, fov: 2, minW: siteW * 1.75 },        // 입면도: 왼쪽 글 자리를 비우고 건물을 오른쪽에
     { p: P.flat, t: [-siteW * 0.34, H * 0.5 - elevFh * 0.12, 0], fh: elevFh, fov: 2, minW: siteW * 1.75 },
     // v4.0 (flat-to-3d 07): the lens opens with the camera almost level, then one slow rise over the law steps.
     // Same frame size throughout, pitch only grows (14 → 22 → 28 → 34°): the height rises once. Yaw drifts one way.
-    { p: P.open, t: [0, H * 0.18, 0], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.3, pitch: 14, minW: siteW * 1.8 },
-    { p: P.open + 0.45 * (P.lawEnd - P.open), t: [0, H * 0.22, 0], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.5, pitch: 22, minW: siteW * 1.8 },   // 층별 영역이 쌓이는 모습
-    { p: P.open + 0.68 * (P.lawEnd - P.open), t: [0, H * 0.22, -T.D * 0.1], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.7, pitch: 28, minW: siteW * 1.8 },   // 비스듬히 옆에서 일조사선
-    { p: P.lawEnd - 0.006, t: [-siteW * 0.1, H * 0.2, T.D * 0.1], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.85, pitch: 34, minW: siteW * 1.8 },       // 같은 높이에서 주차구획
+    lawKey({ p: P.open, t: [0, H * 0.18, 0], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.3, pitch: 14, minW: siteW * 1.8 }),
+    lawKey({ p: P.open + 0.45 * (P.lawEnd - P.open), t: [0, H * 0.22, 0], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.5, pitch: 22, minW: siteW * 1.8 }),   // 층별 영역이 쌓이는 모습
+    lawKey({ p: P.open + 0.68 * (P.lawEnd - P.open), t: [0, H * 0.22, -T.D * 0.1], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.7, pitch: 28, minW: siteW * 1.8 }),   // 비스듬히 옆에서 일조사선
+    lawKey({ p: P.lawEnd - 0.006, t: [-siteW * 0.1, H * 0.2, T.D * 0.1], fh: big * 2.4, fov: 30, yaw: lawYaw * 0.85, pitch: 34, minW: siteW * 1.8 }),       // 같은 높이에서 주차구획
     ...buildKeys(T, H, big, siteW, hd),
     ...streetKeys(T, H, hd),
     ...sectionKeys(T, H),
     { p: P.entry, ...groundKey(0) },
     { p: P.entry + 0.012, ...groundKey(0.5) },
     { p: P.ground, ...groundKey(1) },
-    { p: P.cut, ...groundKey(0) },
+    { p: P.cut, ...groundKey(1) },   // v4.1: rise from where the 1st-floor visit ended
     { p: P.planIn - 0.016, t: [0, yOff, 0.5 + (T.planShiftZ || 0)], fh: (T.D + (T.wing?.depth || 0)) * 1.8, fov: 18, yaw: 0, pitch: 65, minW: T.W * 1.8 },
     { p: P.planIn, t: [0, yOff, 0.5 + (T.planShiftZ || 0)], fh: (T.D + (T.wing?.depth || 0)) * 1.5, fov: 2.5, yaw: 0, pitch: 89.5, minW: T.W * 1.75 },
     { p: P.planHold, t: [0, yOff, 0.5 + (T.planShiftZ || 0)], fh: (T.D + (T.wing?.depth || 0)) * 1.5, fov: 2.5, yaw: 0, pitch: 89.5, minW: T.W * 1.75 },
@@ -303,7 +308,7 @@ function parkLine() {
     : `주차 법정 <em>${R.req}대</em> · ${L.kind === 'piloti' ? '필로티' : '옥외'} 배치 ${L.provided}대 ${L.provided >= R.req ? '충족' : '부족'}`;
 }
 // ── 마무리 패널 (투어 끝): 프로젝트 요약 + 다음 행동 — 홈페이지에서는 여기에 소개·문의를 붙인다 ──
-const TYPE_ORDER = ['midsize', 'geunsaeng', 'dasedae', 'dormitory', 'jeonwon'];
+const TYPE_ORDER = ['midsize', 'dasedae', 'dormitory', 'jeonwon'];
 function closingHTML() {
   const T = PRJ.T, F = PRJ.fit, e = PRJ.est, last = PRJ.CASH[PRJ.CASH.length - 1];
   const nextKey = TYPE_ORDER[(TYPE_ORDER.indexOf(PRJ.key) + 1) % TYPE_ORDER.length];
@@ -387,7 +392,7 @@ function onEstimateChange(what, patch) {
 
 function switchType(key) {
   if (!TYPES[key]) return;
-  setPlaying(false); setTourFocus(false);
+  setPlaying(false); setTourFocus(state.tourFocus);
   try { history.replaceState(null, '', `?type=${key}`); } catch (e) { /* file:// 등에서는 무시 */ }
   disposeWorld();
   loadType(key);
@@ -398,7 +403,7 @@ function switchType(key) {
 }
 
 // ── 상태 · 입력 ─────────────────────────────────────────────────────────
-const state = { beat: -2, intro: (FIXED_P == null && !q.has('nointro') && !reducedMotion.matches) ? 0 : 1, lawStep: -1, p: FIXED_P ?? 0, target: FIXED_P ?? 0, hour: q.has('hour') ? parseFloat(q.get('hour')) : 14, playing: false, playTo:null, seeking: false, playBuildOnly: false, tourFocus: false, dirty: true, lastT: -1, lastHour: -1, lastStop: -2 };
+const state = { beat: -2, intro: (FIXED_P == null && !q.has('nointro') && !reducedMotion.matches) ? 0 : 1, lawStep: -1, p: FIXED_P ?? 0, target: FIXED_P ?? 0, hour: q.has('hour') ? parseFloat(q.get('hour')) : 14, playing: false, playTo:null, seeking: false, playBuildOnly: false, tourFocus: true, dirty: true, lastT: -1, lastHour: -1, lastStop: -2 };
 // One exponential follower, as in flat-to-3d 03 (k = 5.5/s): the camera catches up with the scroll.
 const FOLLOW_RATE = 5.5;
 const followScroll = (p, target, dt) => Math.abs(target - p) < 1e-6 ? target : p + (target - p) * (1 - Math.exp(-FOLLOW_RATE * dt));
@@ -454,12 +459,33 @@ function setPlaying(on, buildOnly = false) {
   $('buildPlay').setAttribute('aria-pressed', String(on && buildOnly));
   $('buildPlay').textContent = on && buildOnly ? '❚❚ 일시정지' : '▶ 공정 재생';
 }
+// v4.1: the tour shows the space only by default; the description lives in a glass drawer
+// (photo header from the actual view + description header). The choice is remembered per viewer.
 function setTourFocus(on) {
   state.tourFocus = on;
   document.body.classList.toggle('tourFocus', on);
   $('tourDetails').hidden = on; $('radar').hidden = on;
   $('tourToggle').setAttribute('aria-expanded', String(!on));
-  $('tourToggle').textContent = on ? '설명 펼치기 ↙' : '공간만 보기 ↗';
+  $('tourToggle').textContent = on ? '설명 ▸' : '설명 닫기 ◂';
+  try { localStorage.setItem('fqDrawer', on ? 'closed' : 'open'); } catch (e) { /* storage unavailable */ }
+  if (!on) { state.dirtyTour = true; showSnap(); }
+}
+// Photo header: a frame of the real view, captured when the camera settles at a space.
+const snaps = new Map(), snapCanvas = document.createElement('canvas');
+snapCanvas.width = 640; snapCanvas.height = 400;
+function captureSnap(key) {
+  const src = renderer.domElement, sw = src.width, sh = src.height, r = 640 / 400;
+  const w = Math.min(sw, sh * r), h = w / r;
+  try {
+    snapCanvas.getContext('2d').drawImage(src, (sw - w) / 2, (sh - h) / 2, w, h, 0, 0, 640, 400);
+    snaps.set(key, snapCanvas.toDataURL('image/jpeg', 0.82));
+  } catch (e) { /* capture unavailable */ }
+}
+function showSnap() {
+  const s = W?.tour?.stops[Math.max(0, state.lastStop)]; if (!s) return;
+  const url = snaps.get(`${PRJ.key}:${state.lastStop}`);
+  if (url) $('tdImg').src = url; else $('tdImg').removeAttribute('src');
+  $('tdCap').textContent = url ? `PHOTO · ${s.title}` : `PHOTO · ${s.title} — 도착하면 현재 시점을 담습니다`;
 }
 function updateJourney(p) {
   const index = chapterAt(p), chapter = CHAPTERS[index];
@@ -479,6 +505,7 @@ $('chapterPrev').addEventListener('click', () => navigate(CHAPTERS[Math.max(0, c
 $('chapterNext').addEventListener('click', () => navigate(CHAPTERS[Math.min(CHAPTERS.length - 1, chapterAt(state.p) + 1)].jump, true, true));
 $('enterStudy').addEventListener('click', () => navigate(0.06));
 $('tourToggle').addEventListener('click', () => setTourFocus(!state.tourFocus));
+$('tdClose').addEventListener('click', () => setTourFocus(true));
 $('buildPlay').addEventListener('click', () => {
   if (state.playing && state.playBuildOnly) { setPlaying(false); return; }
   if (state.p < P.lawEnd || state.p >= P.buildEnd) { state.p = state.target = P.lawEnd; scrollToP(P.lawEnd, false); }
@@ -528,7 +555,7 @@ const BEATS = [
   [() => P.street + 0.004, () => P.secIn + 0.016, '06 — 단면', '절단면이 들어옵니다. <em>렌즈가 열려도 단면의 크기는 그대로.</em>'],
   [() => P.secIn + 0.016, () => P.secOut - 0.006, '06 — 단면', '사람의 눈높이에서 <em>1층 단면을 읽습니다.</em>'],
   [() => P.secOut, () => P.ground + 0.002, '07 — 입구·1층', '입구를 지나 <em>1층에 먼저 들어갑니다.</em>'],
-  [() => P.ground + 0.002, () => P.planIn, '08 — 평면', '현관으로 나와, <em>방금 본 공간을 도면으로 읽습니다.</em>'],
+  [() => P.ground + 0.002, () => P.planIn, '08 — 평면', '천장이 걷히고, <em>방금 본 공간을 도면으로 읽습니다.</em>'],
   [() => P.planHold + 0.004, () => P.land - 0.004, '08 — 착지', '벽이 솟고, 눈높이로 <em>현관에 내려앉습니다.</em>'],
 ];
 const sceneCode = p => p < P.flat ? 'ELV A-201 입면' : p < P.open ? 'SCAN 스윕' : p < P.lawEnd ? 'ZONING 법규' : p < P.buildEnd ? 'BUILD 공정' : p < P.street ? 'HANDOVER 준공'
@@ -658,7 +685,11 @@ function frame(now) {
 
   // 3) 평면도 컷 (클리핑 평면 높이)
   let cut = 1e4;
-  if (p >= P.cut && p < P.planIn) cut = lerp(roofY() + 6, W.planCut, smooth(P.cut + 0.3 * (P.planIn - P.cut), P.planIn, p));
+  // v4.1: standing in the 1st-floor room, the ceiling lifts off and the walls drop to the 1.2 m cut;
+  // while the camera rises the cut stays below it, so no slab ever passes in front of the lens.
+  const groundCut = floorY(1) + 1.2, groundCeil = (T.floors > 1 ? floorY(2) : roofY()) - 0.03;
+  if (p > P.ground && p < P.cut) cut = lerp(groundCeil, groundCut, smooth(P.ground, P.cut, p));
+  else if (p >= P.cut && p < P.planIn) cut = Math.min(W.planCut, Math.max(groundCut, camY - 1.0));
   else if (p >= P.planIn && p < P.land) {
     const walls = lerp(W.planCut, W.wallTop, smooth(P.planHold, P.planHold + 0.5 * (P.land - P.planHold), p));   // 벽이 솟는다
     const ramp = clamp01((W.wallTop - 0.1 - camY) / Math.max(0.3, W.wallTop - 0.1 - W.startY));                // 눈높이에 닿을수록
@@ -786,6 +817,11 @@ function frame(now) {
   gtao.blendIntensity = 0.45 * smooth(8, 24, camera.fov) * (1 - drawK) * (1 - drawK);
   gtao.enabled = HQ && gtao.blendIntensity > 0.001;
   if (HQ && gtao.enabled) composer.render(); else renderer.render(scene, camera);   // 도면 장면은 후처리 없이(잉크색 정확히)
+  // v4.1 photo header: once the camera has settled at a space, keep that frame for the drawer.
+  if (inTour && state.lastStop >= 0 && !state.tourSample?.lift && Math.abs(p - previousP) < 1e-7 && Math.abs(state.target - p) < 1e-5) {
+    const key = `${PRJ.key}:${state.lastStop}`;
+    if (!snaps.has(key)) { captureSnap(key); if (!state.tourFocus) showSnap(); }
+  }
   if (!window.__ksReady) { const e = $('err'); if (e.dataset.soft && !/오류:/.test(e.textContent)) e.style.display = 'none'; }
   window.__ksReady = true;
 }
@@ -826,6 +862,7 @@ function renderTour() {
   const shown=lift?{floor:currentFloor(lift.y+.1),title:`승강기 · ${lift.from} → ${lift.to}층`,desc:['상승','하강'].includes(lift.phase)?`문을 바라본 채 ${lift.to}층으로 ${lift.phase==='하강'?'내려갑니다':'올라갑니다'}. 상단 표시에 현재 층과 높이가 나옵니다. 도착하면 문이 열리고 다음 층 실내로 이어집니다.`:`${lift.phase} · 문과 객실의 실제 위치를 따라 이동합니다.`}:s;
   $('tourStop').textContent = `${String(i + 1).padStart(2, '0')} / ${String(st.length).padStart(2, '0')} · ${shown.title}`;
   $('tcard').innerHTML = tourCard(shown, i, st.length, lift?null:room);
+  if (!state.tourFocus) showSnap();
   $('rideLift').hidden=!PRJ.T.core?.ev;
   $('rideLift').disabled=!st.some(s=>s.kind==='elevator'&&s.u>tourU(state.p)+0.001);
   $('tnext').textContent = i < st.length - 1 ? `다음: ${st[i + 1].title} →` : '처음으로 ↺';
@@ -845,10 +882,11 @@ function updateRadar() {
 
 // ── 시작 ─────────────────────────────────────────────────────────────────
 try { await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2500))]); } catch (e) { /* 폰트 실패는 무시 */ }
-loadType(q.get('type') || 'geunsaeng');
+loadType(q.get('type') || 'midsize');   // v4.1: first visit opens the mid-size building
 resize();
 buildWorld();
 if (FIXED_P != null) document.documentElement.classList.add('fixed');
 if (q.has('est')) document.body.classList.add('estOpen');
+{ let open = false; try { open = localStorage.getItem('fqDrawer') === 'open'; } catch (e) { /* storage unavailable */ } setTourFocus(!open); }
 requestAnimationFrame(frame);
 window.__ks = { state, PRJ, get W() { return W; }, switchType, camera, renderer, THREE, narrativePose, P };

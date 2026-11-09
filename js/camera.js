@@ -35,7 +35,7 @@ export function camAt(p, keys, aspect) {
     const d = fh / (2 * Math.tan(fov * D2R / 2)), h = fi(lerp(f(height(a)), f(height(b)), e)) - t[1];
     pitch = Math.asin(Math.max(-0.999, Math.min(Math.sin(89.5 * D2R), h / d))) / D2R;
   }
-  return { t, fh, fov, yaw: L(ya, yb), pitch, viewShift: L(a.viewShift || 0, b.viewShift || 0),
+  return { t, fh, fov, yaw: L(ya, yb), pitch, viewShift: L(a.viewShift || 0, b.viewShift || 0), viewShiftX: L(a.viewShiftX || 0, b.viewShiftX || 0),
            eyeHeight: both ? L(a.eyeHeight, b.eyeHeight) : undefined };
 }
 
@@ -43,7 +43,8 @@ export function setCam(camera, c) {
   camera.fov = c.fov;
   const {pos,look:tgt,distance:d}=framePose(c);
   camera.position.copy(pos);
-  if (Math.abs(c.viewShift || 0) > 1e-5) camera.setViewOffset(camera.aspect, 1, 0, c.viewShift, camera.aspect, 1);
+  // viewShift: vertical (dock below), viewShiftX: horizontal (v4.1 — law card on the left)
+  if (Math.abs(c.viewShift || 0) > 1e-5 || Math.abs(c.viewShiftX || 0) > 1e-5) camera.setViewOffset(camera.aspect, 1, (c.viewShiftX || 0) * camera.aspect, c.viewShift || 0, camera.aspect, 1);
   else camera.clearViewOffset();
   camera.near = Math.max(0.1, d - 110);
   camera.far = d + 220;
@@ -97,8 +98,11 @@ export function poseToKey(pos, look, fov) {
 }
 export const focalMM = fov => 12 / Math.tan(fov * D2R / 2);
 
-// Timeline: moves between spaces take 0.7× their walking time (3–45 s) and each space holds 1.4 s.
-export const LEG_SCALE = 0.7, LEG_MIN = 3, LEG_MAX = 45, HOLD_SECONDS = 1.4;
+// Timeline: moves between spaces take 0.38× their walking time (2.2–28 s) and each space holds 0.6 s.
+export const LEG_SCALE = 0.38, LEG_MIN = 2.2, LEG_MAX = 28, HOLD_SECONDS = 0.6;
+// v4.1: brisk by default; a space marked `stop.emphasis` is approached at 0.8× and held 2.6 s.
+// A lift ride (from the call to the arrival hall) is one leg of at most 18 s.
+export const EMPHASIS_SCALE = 0.8, EMPHASIS_HOLD = 2.6, LIFT_SCALE = 0.3, LIFT_MAX = 18;
 // Room markers update the UI while playback continues through them.
 export function makeTour(keys, yOff = 0, { speed = 0.48, dwell = 0, turnSpeed = 0.22 } = {}) {
   const P = keys.map(k => new THREE.Vector3(k.pos[0], k.pos[1] + yOff, k.pos[2]));
@@ -157,13 +161,18 @@ export function makeTour(keys, yOff = 0, { speed = 0.48, dwell = 0, turnSpeed = 
   // v4.0 timeline (flat-to-3d 07 / 03): scroll and autoplay move from one space to the next with an
   // ease-in-out, then settle for a moment at the space. `routeU(v)` maps timeline progress v → route u.
   const smoothstep = x => x * x * (3 - 2 * x);
-  const marks = [...new Set([0, ...stops.map(s => s.i), keys.length - 1])].sort((a, b) => a - b);
+  const liftStarts = keys.map((k, i) => (k.lift && !keys[i - 1]?.lift ? i : -1)).filter(i => i > 0);
+  const marks = [...new Set([0, ...stops.map(s => s.i), ...liftStarts, keys.length - 1])].sort((a, b) => a - b);
   const pieces = [];
   marks.forEach((i, n) => {
     const r = keySeconds[i] / total;
-    if (n > 0 && keys[i].stop) pieces.push({ type: 'hold', r, w: HOLD_SECONDS });
+    if (n > 0 && keys[i].stop) pieces.push({ type: 'hold', r, w: keys[i].stop.emphasis ? EMPHASIS_HOLD : HOLD_SECONDS });
     const j = marks[n + 1];
-    if (j != null) { const sec = keySeconds[j] - keySeconds[i]; pieces.push({ type: 'move', r0: r, r1: keySeconds[j] / total, w: Math.min(LEG_MAX, Math.max(LEG_MIN, sec * LEG_SCALE)) }); }
+    if (j == null) return;
+    const sec = keySeconds[j] - keySeconds[i], lift = keys.slice(i + 1, j + 1).some(k => k.lift);
+    const w = lift ? Math.min(LIFT_MAX, Math.max(LEG_MIN, sec * LIFT_SCALE))
+      : Math.min(keys[j].stop?.emphasis ? LEG_MAX * 1.6 : LEG_MAX, Math.max(LEG_MIN, sec * (keys[j].stop?.emphasis ? EMPHASIS_SCALE : LEG_SCALE)));
+    pieces.push({ type: 'move', r0: r, r1: keySeconds[j] / total, w, lift });
   });
   const play = pieces.reduce((a, q) => a + q.w, 0);
   let acc2 = 0; pieces.forEach(q => { q.v0 = acc2 / play; acc2 += q.w; q.v1 = acc2 / play; });

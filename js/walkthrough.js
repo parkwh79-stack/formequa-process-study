@@ -50,26 +50,33 @@ export function elevatorLeg(T, from = 1, to = 2) {
   const front=[x,a+EYE_HEIGHT,z1+Math.min(2.5,T.core.z1-z1-.3)], inside=[x,a+EYE_HEIGHT,z];
   const c=T.core, hallZ=T.use==='dormitory'?c.z1-.35:(c.doorEast?midpoint(c.doorEast):-1.55);
   const hall=[x,b+EYE_HEIGHT,hallZ], hallLook=T.use==='dormitory'?[midpoint(c.frontDoor),b+EYE_HEIGHT,c.z1+2]:[c.x1+2,b+EYE_HEIGHT,hallZ];
-  // v4.0: one clear ride. Face the door, it opens, step in while turning round to face it again,
-  // the door closes, rise straight up facing the door (floor read-out in the HUD), it opens, step out.
-  // The v3.8 side-window turn and the long waits were removed.
-  const door = y => [x + 0.35, y + EYE_HEIGHT - 0.05, z1 + 3];
+  // v4.1: the classic lift shot. Wait facing the door, it opens, turn round in the hall (the turn shows
+  // the hall, never a cabin wall), back into the cabin, the door closes in front, rise fast and straight,
+  // the door opens and you walk straight out. Stops are short; the timeline caps the whole ride.
+  const out = y => [x + 0.35, y + EYE_HEIGHT - 0.05, z1 + 8];
   return [
-    pose(front,[x,a+EYE_HEIGHT+.15,z0],{hold:0.6,lift:lift(a,0,'호출')}),
-    pose(front,[x,a+EYE_HEIGHT+.15,z0],{hold:1.0,lift:lift(a,1,'문 열림')}),
-    pose(inside,door(a),{speed:0.7,turnSpeed:0.3,lift:lift(a,1,'탑승')}),
-    pose(inside,door(a),{hold:0.8,lift:lift(a,0,'문 닫힘')}),
-    pose([x,b+EYE_HEIGHT,z],door(b),{speed:0.85,lift:lift(b,0,'상승')}),
-    pose([x,b+EYE_HEIGHT,z],door(b),{hold:0.5,lift:lift(b,0,'도착')}),
-    pose([x,b+EYE_HEIGHT,z],door(b),{hold:0.9,lift:lift(b,1,'문 열림')}),
-    pose([x,b+EYE_HEIGHT,z1+0.7],[x,b+EYE_HEIGHT,hallZ],{speed:0.7,lift:lift(b,1,'하차')}),
-    pose(hall,hallLook,{speed:0.8,
-      stop:{kind:'elevator',floor:to,room:'core2',title:`${to}층 도착 · 승강기`,desc:`${from}층에서 ${to}층으로 이동했습니다. 문을 나와 이 층의 실내를 살펴봅니다.`,reveal:['core2']}}),
+    pose(front,[x,a+EYE_HEIGHT+.15,z0],{hold:0.4,lift:lift(a,0,'호출')}),
+    pose(front,[x,a+EYE_HEIGHT+.15,z0],{hold:0.6,lift:lift(a,1,'문 열림')}),
+    pose(front,out(a),{turnSpeed:0.3,lift:lift(a,1,'탑승')}),
+    pose(inside,out(a),{speed:0.9,lift:lift(a,1,'탑승')}),
+    pose(inside,out(a),{hold:0.5,lift:lift(a,0,'문 닫힘')}),
+    pose([x,b+EYE_HEIGHT,z],out(b),{speed:2.0,lift:lift(b,0,'상승')}),
+    pose([x,b+EYE_HEIGHT,z],out(b),{hold:0.3,lift:lift(b,0,'도착')}),
+    pose([x,b+EYE_HEIGHT,z],out(b),{hold:0.5,lift:lift(b,1,'문 열림')}),
+    pose([x,b+EYE_HEIGHT,z1+0.7],[x,b+EYE_HEIGHT,hallZ],{speed:0.9,lift:lift(b,1,'하차')}),
+    pose(hall,hallLook,{speed:0.9,
+      stop:{kind:'elevator',floor:to,room:'core2',title:`${to}층 도착 · 승강기`,desc:to>2?`${from}층에서 ${to}층으로 바로 올라왔습니다. 2~${to}층은 같은 기준층 평면이라 최상층 한 곳만 둘러봅니다.`:`${from}층에서 ${to}층으로 이동했습니다. 문을 나와 이 층의 실내를 살펴봅니다.`,reveal:['core2']}}),
   ];
 }
 
-export const visitFloors = T => T.core?.ev ? [...new Set([1,2,Math.max(3,Math.ceil((T.floors+2)/2)),T.floors])].filter(n=>n<=T.floors).sort((a,b)=>a-b) : [1,2];
-export function buildWalkthrough(T) {
+// v4.1: visit floors whose plan is different. Upper floors repeat the typical plan, so the lift goes
+// straight from the 1st floor to the top floor and the typical plan is seen once (with the best view).
+export const visitFloors = T => T.core?.ev ? [...new Set([1, T.floors])].filter(n => n <= T.floors) : [1, 2];
+// Spaces worth a slower approach and a longer look (everything else moves briskly).
+export const EMPHASIS = /로비|커튼월|거실|창밖|공동주방|벽난로|아일랜드|발코니|카페 홀/;
+const markEmphasis = ks => ks.map(k => k.stop && EMPHASIS.test(k.stop.title) ? { ...k, stop: { ...k.stop, emphasis: true } } : k);
+export function buildWalkthrough(T) { return markEmphasis(routeKeys(T)); }
+function routeKeys(T) {
   const off = levelY(T, T.planFloor);
   const original = T.tour.map(k => ({ ...k, pos: [k.pos[0], k.pos[1] + off, k.pos[2]], look: [k.look[0], k.look[1] + off, k.look[2]] }));
   if (!T.core?.ev || T.floors < 2) return original.map(k=>{

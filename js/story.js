@@ -30,7 +30,8 @@ export function progressPerSecond(p, tourSeconds = 150) {
 }
 
 // Allocate most of the physical scroll track to the slower interior visit.
-const SCROLL_TOUR = 0.38, SCROLL_CLOSE = 0.98;
+// v4.1: the shorter, de-duplicated tour gets about half of the track (front scenes the other half).
+const SCROLL_TOUR = 0.5, SCROLL_CLOSE = 0.98;
 export function storyToScroll(p) {
   if(p<=P.land) return p/P.land*SCROLL_TOUR;
   if(p<=P.close) return SCROLL_TOUR+(p-P.land)/(P.close-P.land)*(SCROLL_CLOSE-SCROLL_TOUR);

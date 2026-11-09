@@ -98,7 +98,7 @@ export const CAP_ZONES = ['sr', 'cn', 'cg'];   // 준주거·근린상업·일�
 
 // ── ② 배치 ──────────────────────────────────────────────────────────────────
 // 건물 좌표계(원점 = 평면 중심, +z = 남·도로). s배된 치수 기준. 반환 stalls = [{x0,z0,x1,z1,tandem}]
-export function parkingLayout(T, m, law, req) {
+export function parkingLayout(T, m, law, req, acc = 0) {
   const W = m.W, D = m.D, hw = W / 2, hd = D / 2, s = W / T.W;
   const sb = T.setback || { front: 1, side: 0.5 };
   const front = sb.front + (law.road < 4 ? (4 - law.road) / 2 : 0);
@@ -137,11 +137,17 @@ export function parkingLayout(T, m, law, req) {
       note: !n8 ? '8대 초과 → 대지 안 차로 6m 필요 (이 평면에서는 불가)' : stalls.some(t => t.tandem) ? '직렬 2대 포함 (5대 이하 특례)' : '', ok8: n8 };
   }
   if (T.basement) {
+    // v4.1: the basement is designed to meet the legal count. Levels are added (up to T.maxBasement, default 3)
+    // until puzzle stalls + self-park accessible stalls cover the requirement. Accessible stalls cannot be
+    // mechanical: they are self-park bays on B1 next to the lift, reached by the car lift (3.3 × 5.0 m + 6 m aisle).
     const coreA = T.core ? (T.core.x1 - T.core.x0) * (T.core.z1 - T.core.z0) * s * s : 0;
     const perLevel = Math.max(0, Math.floor((m.plate - coreA - 30) / 14));   // 카리프트 30㎡, 2단 퍼즐 대당 14㎡
-    const levels = perLevel ? Math.max(1, Math.ceil(req / perLevel)) : 0;
-    return { kind: 'mech', label: '지하 기계식 (카리프트 + 2단 퍼즐)', stalls: [], provided: Math.min(perLevel, req),                     // T.basement는 지하층 높이(m) — 현재 설계는 지하 1개층
-      perLevel, levels, note: `지하 1개층 ${perLevel}대 · 필요 지하 ${levels}개층 (전문업체 검토)` };
+    const accSlots = acc ? Math.ceil((acc * 3.3 * 5 + 6 * 3.3 * Math.min(acc, 2)) / 14) : 0;   // 장애인 자주식이 차지하는 퍼즐 자리
+    const maxB = T.maxBasement ?? 3, cap = L => Math.max(0, perLevel * L - accSlots) + acc;
+    let levels = 1; while (levels < maxB && cap(levels) < req) levels++;
+    const provided = perLevel ? Math.min(req, cap(levels)) : 0;
+    return { kind: 'mech', label: `지하 ${levels}개층 기계식 (카리프트 + 2단 퍼즐)`, stalls: [], provided, perLevel, levels, acc, maxB, ok: perLevel > 0 && cap(levels) >= req,
+      note: `층당 ${perLevel}대 × ${levels}개층${acc ? ` · 장애인 전용 ${acc}대는 지하 1층 자주식(승강기 옆)` : ''}${cap(levels) < req ? ` · 지하 ${maxB}개층으로도 ${req - cap(levels)}대 부족` : ''} · 기계식 설비는 전문업체 검토` };
   }
   // 전원주택 등: 앞마당 옥외 주차 (서쪽부터, 대문·진입로 x≈+2.2 피함)
   const room = front - 0.3;
@@ -153,15 +159,16 @@ export function parkingLayout(T, m, law, req) {
 }
 
 // ── ③ 판정 행 (law.check에 들어간다) ───────────────────────────────────────
-// hard = true면 필수 항목(매스 탐색이 이 조건까지 만족해야 함). 지하 기계식은 층 추가로 해결 가능하므로 '권고'.
+// hard = true면 필수 항목(매스 탐색이 이 조건까지 만족해야 함). v4.1부터 지하 기계식도 필수 — 지하층을 늘려 충족.
 export function parkingCheck(T, m, law) {
   const R = parkingRequired(T, m, law);
-  const L = parkingLayout(T, m, law, R.req);
-  const hard = law.parkHard !== false && L.kind !== 'mech';
-  const ok = L.kind === 'mech' ? L.levels <= 1 : (L.provided >= R.req && L.ok8 !== false);
-  const accNote = R.acc ? (L.kind === 'mech' ? `장애인 전용 ${R.acc}대는 기계식 불가 → 지상 자주식 별도` : `장애인 전용 ${R.acc}대 (3.3m 폭) 포함`) : '';
+  const L = parkingLayout(T, m, law, R.req, R.acc || 0);
+  // v4.1: every layout, including the mechanical basement, must meet the legal count (no 'advisory' pass).
+  const hard = law.parkHard !== false;
+  const ok = L.kind === 'mech' ? L.ok : (L.provided >= R.req && L.ok8 !== false);
+  const accNote = R.acc ? (L.kind === 'mech' ? '' : `장애인 전용 ${R.acc}대 (3.3m 폭) 포함`) : '';
   const row = { k: 'park', name: `주차 (${L.label})`, plan: L.provided, max: R.req, unit: '대', ok, minRule: true, advisory: !hard,
     note: [R.capOn ? `주차상한제: 최고한도 ${R.capMax}대 (기준 ${R.std}대의 ${R.capRatio}%)` : '', L.note, accNote, R.ext ? `확장형 ${R.ext}대 이상` : '',
-      ok ? '' : L.kind === 'mech' ? '지하층 추가 또는 인근 부설주차장 검토' : '세대·실 수를 줄이거나 대지를 넓혀야 함'].filter(Boolean).join(' · ') };
+      ok ? '' : L.kind === 'mech' ? '매스를 줄이거나 인근 부설주차장 검토' : '세대·실 수를 줄이거나 대지를 넓혀야 함'].filter(Boolean).join(' · ') };
   return { R, L, row };
 }

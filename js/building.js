@@ -208,6 +208,11 @@ export function buildAll() {
     add(box(0.35, h, D, 'concrete', -hw + 0.175, y0, 0), 'sub', 0.36, 'rise');
     add(merged(xs.slice(1, -1).map(x => [colS, h, colS, x, y0, 0]), 'concrete', undefined, [0, y0, 0]), 'sub', 0.45, 'rise');
     add(solid(slabGeo(-hw, -hd, hw, hd, 0.25), 'concrete'), 'sub', 0.75, 'drop', { lift: true });
+    // v4.1: intermediate slabs of a multi-level parking basement
+    for (let k = 1; k < (T.basementLevels || 1); k++) {
+      const slab = solid(slabGeo(-hw, -hd, hw, hd, 0.25), 'concrete'); slab.position.y = -k * (T.basementLevel || T.basement);
+      add(slab, 'sub', 0.5 + 0.08 * k, 'show', { d: 0.3 });
+    }
   }
 
   // ════════════════════════════════════════════════════════════════════════

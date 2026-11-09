@@ -80,7 +80,7 @@ function parkSection(F, L) {
   const srcs = [...new Set(R.parts.map(p => p.src)), 'size', 'acc', 'ext', R.capOn || L.capZone ? 'cap' : null, Lay.kind === 'piloti' ? 'small' : null].filter(Boolean)
     .map(k => `<li>${PARK_SOURCES[k].law} · <em>${PARK_SOURCES[k].status}</em></li>`).join('');
   const lay = Lay.kind === 'mech'
-    ? `지하 기계식 1개층 <b>${Lay.perLevel}대</b> → 필요 지하 <b>${Lay.levels}개층</b>${Lay.levels > 1 ? ` · 추가 ${Lay.levels - 1}개층 공사비 ${won(e.extraCost || 0)}을 토공·지하골조에 반영` : ''} · 주차설비 ${won(e.equip || 0)}을 설비공사에 반영`
+    ? `지하 <b>${Lay.levels}개층</b> 기계식 · 층당 <b>${Lay.perLevel}대</b> → 계획 <b>${Lay.provided}대</b> / 법정 ${R.req}대${Lay.acc ? ` (장애인 전용 ${Lay.acc}대는 지하 1층 자주식)` : ''}${Lay.levels > 1 ? ` · 추가 ${Lay.levels - 1}개층 공사비 ${won(e.extraCost || 0)} 포함(토공·지하골조)` : ''} · 주차설비 ${won(e.equip || 0)}을 설비공사에 반영`
     : `${Lay.label} <b>${Lay.provided}대</b> 배치${Lay.note ? ' · ' + Lay.note : ''} — 3D 바닥의 흰 구획선`;
   return `<h3>주차 대수 산정 <small>용도별 산식을 합산한 뒤 끝수 처리 (별표1 비고)</small></h3>
     <div class="form">
@@ -120,7 +120,7 @@ export function renderEstimate(onChange) {
       <label>전면도로 폭 <i>m</i><input data-law="road" type="number" step="0.5" value="${L.road}"></label>
       <label>자동 최대 매스<select data-law="auto">${opt('true', '켜기 (법정 최대로 맞춤)', String(L.auto))}${opt('false', '끄기 (템플릿 설계 검토만)', String(L.auto))}</select></label>
     </div>
-    <div class="fitSum ${F.feasible === false ? 'bad' : ''}">${F.auto ? (F.feasible === false ? '이 대지·용도지역에서는 모든 조건을 만족하는 매스를 찾지 못했습니다. 대지를 키우거나 용도지역을 바꿔 보세요.' : `자동 매스: <b>${F.n}층</b> (${T.piloti ? '필로티 포함' : T.basement ? '지하1층 별도' : ''}) · 평면 ${F.m.W.toFixed(1)}×${F.m.D.toFixed(1)}m · 지상 연면적 <b>${F.m.farArea.toFixed(0)}㎡</b> · 높이 ${F.m.height.toFixed(1)}m`) : '자동 매스 꺼짐 — 템플릿 설계를 그대로 검토합니다.'}</div>
+    <div class="fitSum ${F.feasible === false ? 'bad' : ''}">${F.auto ? (F.feasible === false ? '이 대지·용도지역에서는 모든 조건을 만족하는 매스를 찾지 못했습니다. 대지를 키우거나 용도지역을 바꿔 보세요.' : `자동 매스: <b>${F.n}층</b> (${T.piloti ? '필로티 포함' : T.basement ? `지하${T.basementLevels || 1}개층 별도` : ''}) · 평면 ${F.m.W.toFixed(1)}×${F.m.D.toFixed(1)}m · 지상 연면적 <b>${F.m.farArea.toFixed(0)}㎡</b> · 높이 ${F.m.height.toFixed(1)}m`) : '자동 매스 꺼짐 — 템플릿 설계를 그대로 검토합니다.'}</div>
     <table class="tbl law"><thead><tr><th>검토 항목</th><th>계획</th><th>기준</th><th>판정</th></tr></thead><tbody>${lawRows}</tbody></table>
     ${parkSection(F, L)}
     <p class="note">법규 값 기준일 ${RULES_ASOF}. '검증 필요' 항목은 법령 MCP로 조문·조례를 확인해 law.js의 표를 갱신하세요. 지구단위계획·가로구역 높이·도로사선 등은 아직 반영하지 않았습니다. 3D에서 주황 선이 대지 경계·일조사선·층별 건축가능영역입니다.</p>

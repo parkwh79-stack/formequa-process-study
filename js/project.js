@@ -53,12 +53,15 @@ export const PRJ = { key: null, T0: null, T: null, law: null, fit: null, park: n
 // 유형 + 대지·용도지역 → 법규 자동 매스(law.js fit) → 배율·층수를 적용한 실제 설계 T
 export function loadType(key, lawOverride = null, keepOpts = false) {
   if (key === 'dagagu') key = 'dasedae'; // Old bookmarks open the retained residential study.
-  PRJ.key = TYPES[key] ? key : 'geunsaeng';
+  if (key === 'geunsaeng') key = 'midsize'; // v4.1: the neighbourhood building was merged into the mid-size building.
+  PRJ.key = TYPES[key] ? key : 'midsize';
   const T0 = PRJ.T0 = TYPES[PRJ.key];
   PRJ.law = { ...T0.law, ...(lawOverride || {}) };
   PRJ.fit = fit(T0, PRJ.law);
   const T = PRJ.T = resolveEntrances(scaleType(T0, PRJ.fit.s, PRJ.fit.n, PRJ.law));
   PRJ.park = PRJ.fit.park;                                   // 주차: 필요 대수(R) · 배치(L) — parking.js
+  // v4.1: the basement gets as many parking levels as the legal count needs (3D pit, frame and schedule follow).
+  if (T.basement && PRJ.park?.L?.kind === 'mech') { T.basementLevel = T.basement; T.basementLevels = PRJ.park.L.levels; T.basement = T.basement * PRJ.park.L.levels; }
   PRJ.openings = expandOpenings(T);
   if (keepOpts && PRJ.opts.unit) return recompute();
   PRJ.opts = {
@@ -91,7 +94,7 @@ export function areas() {
   const T = PRJ.T, plate = T.W * T.D + (T.wingArea || 0);       // 전원주택 윙 바닥면적 포함
   const coreA = T.core ? (T.core.x1 - T.core.x0) * (T.core.z1 - T.core.z0) : 0;
   const above = T.piloti ? (T.floors - 1) * plate + coreA : T.floors * plate;
-  const below = T.basement ? plate : 0;                     // 옥탑(계단탑·승강기탑)은 바닥면적 제외 (건축법 시행령 제119조)
+  const below = T.basement ? plate * (T.basementLevels || 1) : 0;   // 지하 주차층 수만큼. 옥탑은 바닥면적 제외 (건축법 시행령 제119조)
   const siteA = (T.site.x1 - T.site.x0) * (T.site.z1 - T.site.z0);
   return { plate, above, below, gfa: above + below, site: siteA, far: above / siteA * 100, bcr: plate / siteA * 100 };
 }
@@ -112,9 +115,8 @@ export function estimate() {
     const req = PRJ.park.R.req, levels = Math.max(1, PL.levels || 1);
     park.extraLevels = levels - 1;
     park.equip = Math.min(req, PL.perLevel * levels) * (o.parkUnit ?? 2500) / 1e4;
-    park.extraCost = park.extraLevels * belowPy * o.unit * 1.6 / 1e4;
+    park.extraCost = park.extraLevels * belowPy / levels * o.unit * 1.6 / 1e4;   // 표시용: 추가 층 몫 (지하 연면적에 이미 포함)
     lines.mep = (lines.mep || 0) + park.equip;
-    if (park.extraCost) { lines.earth = (lines.earth || 0) + park.extraCost * 0.55; lines.sub = (lines.sub || 0) + park.extraCost * 0.45; }
   }
   const direct = Object.values(lines).reduce((a, b) => a + b, 0);
   const indirect = direct * o.indirect / 100;
