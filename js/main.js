@@ -148,22 +148,23 @@ function buildKeys(T, H, big, siteW, hd) {
   ks.push({ p: P.buildEnd, t: [0, H * 0.5, 0], fh: tall ? H * 1.4 : big * 1.55, fov: 34, yaw: 26, pitch: timber ? 9 : 12, minW: siteW * 1.4 });
   // 공정 구간은 아래쪽 1/3을 공정표(dock)가 가리므로 피사체를 화면 위쪽(보이는 영역 중앙)으로 올린다
   const aspect = innerWidth / innerHeight, dockHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dockH')) || 284;
-  const dockFrac = Math.min(0.42, dockHeight / innerHeight);
+  // v4.5: on phones there is no programme dock; the glass calendar covers the top (~26%) and the play bar the bottom (~11%).
+  const occTop = MOBILE ? 0.26 : 0, occBot = MOBILE ? 0.11 : Math.min(0.42, dockHeight / innerHeight);
   for (const k of ks) {
     let fh = Math.max(k.fh, (k.minW || 0) / aspect);
-    // At handover fit the complete building in the area above the programme.
-    if (k.p === P.buildEnd) { fh /= 1 - dockFrac; k.fh = fh; }
-    k.t = [k.t[0], k.t[1] - fh * dockFrac * 0.5, k.t[2]];
+    // At handover fit the complete building in the visible band.
+    if (k.p === P.buildEnd) { fh /= 1 - occTop - occBot; k.fh = fh; }
+    k.t = [k.t[0], k.t[1] + fh * (occTop - occBot) * 0.5, k.t[2]];
   }
   ks.sort((a, b) => a.p - b.p);
   // A quiet, type-specific inspection arc. No 100° orbit or reverse whip past the facade.
   ks.forEach((k, i) => {
     const angle = angles[Math.min(i, angles.length - 1)]; k.yaw = angle; delete k.ease;
     if (k.p >= pw(frame.w0)) {
-      const radius = Math.max(siteW * 1.2, H * 1.6, T.W / aspect * 1.05) / (1 - dockFrac);
+      const radius = Math.max(siteW * 1.2, H * 1.6, T.W / aspect * 1.05) / (1 - occTop - occBot);
       const eye = floorY(1) + 1.6, a = angle * Math.PI / 180;
       const targetY = H * 0.45;
-      Object.assign(k, poseToKey([Math.sin(a) * radius, eye, hd + Math.cos(a) * radius], [0, targetY, 0], FOV_WALK()), { eyeHeight: eye, viewShift: dockFrac * 0.5, minW: 0 });
+      Object.assign(k, poseToKey([Math.sin(a) * radius, eye, hd + Math.cos(a) * radius], [0, targetY, 0], FOV_WALK()), { eyeHeight: eye, viewShift: (occBot - occTop) * 0.5, minW: 0 });
     }
   });
   const out = [];
@@ -629,6 +630,33 @@ function mobileNotes(p) {
     if (s && (s.emphasis || s.kind === 'elevator')) showNote(s.title, firstSentence(s.desc));
   }
   $('mProgFill').style.width = `${(p * 100).toFixed(1)}%`;
+  mobileCalendar(p);
+}
+// v4.5 Phone only: the schedule panel is hidden, so a glass calendar shows time passing during construction.
+// The date ticks every day; the tile flips and the week counter pulses whenever a new week starts.
+const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+function mobileCalendar(p) {
+  const on = p > P.lawEnd - 0.004 && p < P.buildEnd + 0.012, el = $('mCal');
+  el.classList.toggle('on', on);
+  if (!on) return;
+  const WEEKS = PRJ.WEEKS, t = weekAt(p), done = t >= WEEKS - 1e-6, wk = Math.min(Math.ceil(WEEKS), Math.floor(t) + 1), d = dateAt(t);
+  const key = `${PRJ.key}|${done ? 'end' : wk}|${d.getTime()}`;
+  if (key === state.mCalKey) return;
+  const prevWk = state.mCalWk; state.mCalKey = key; state.mCalWk = done ? 'end' : wk;
+  $('mCalWk').textContent = done ? '준공' : `W${String(wk).padStart(2, '0')}`;
+  $('mCalOf').textContent = `/ ${WEEKS.toFixed(1)}주`;
+  $('mCalM').textContent = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+  $('mCalDay').textContent = String(d.getDate()).padStart(2, '0');
+  $('mCalDow').textContent = DOW[d.getDay()];
+  const live = PRJ.PHASES.filter(ph => t >= ph.w0 && t < ph.w1).sort((a, b) => b.w0 - a.w0);
+  $('mCalPh').textContent = done ? `사용승인 · ${fmtDate(dateAt(WEEKS))}` : live.length ? `${live[0].name}${live.length > 1 ? ` 외 ${live.length - 1}` : ''}` : '착공 준비';
+  $('mCalFill').style.width = `${(clamp01(t / WEEKS) * 100).toFixed(1)}%`;
+  $('mCalStart').textContent = `착공 ${fmtDate(PRJ.T.start).slice(2)}`;
+  $('mCalDp').textContent = `D+${Math.floor(Math.max(0, t) * 7)}`;
+  $('mCalEnd').textContent = `준공 ${fmtDate(dateAt(WEEKS)).slice(2)}`;
+  if (prevWk != null && prevWk !== state.mCalWk && !reducedMotion.matches) {
+    for (const id of ['mCalD', 'mCalWk']) { const n = $(id); n.classList.remove('tick'); void n.offsetWidth; n.classList.add('tick'); }
+  }
 }
 function frame(now) {
   requestAnimationFrame(frame);
