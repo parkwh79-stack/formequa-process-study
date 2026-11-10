@@ -519,3 +519,28 @@ body:is(.mobile, .tablet) .masthead .wan2 { display: flex !important; pointer-ev
 body.mobile .masthead .wan2 { padding: 6px 0 6px 14px; font-size: 13px; background: none; }
 body.mobile .masthead .wan2 small { font-size: 7.5px; }
 body.tablet .masthead .wan2 { min-height: 42px; justify-content: center; }
+
+/* ── v4.5 휴대폰 전용 공정 달력: 공정 구간에서 날짜가 흐르고 주가 넘어가는 글래스 카드 ─────────── */
+.mCal { display: none; }
+body.mobile .mCal { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; position: fixed; z-index: 7; pointer-events: none;
+  left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); top: calc(var(--headerH, 56px) + 6px);
+  padding: 10px 12px 9px 14px; opacity: 0; transform: translateY(-14px); transition: opacity .35s, transform .45s cubic-bezier(.2,.8,.2,1); }
+body.mobile .mCal.on { opacity: 1; transform: none; }
+.mCalL { min-width: 0; }
+.mCalW { display: flex; align-items: baseline; gap: 6px; }
+.mCalW b { display: inline-block; font: 400 30px/1 var(--serif); letter-spacing: -.01em; transform-origin: left center; }
+.mCalW small { font: 500 11px var(--mono); color: rgba(36,38,34,.6); }
+.mCalPh { margin-top: 4px; font: 600 12px var(--sans); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mCalD { display: grid; justify-items: center; width: 64px; padding: 4px 0 5px; border-radius: 9px; background: rgba(255,255,255,.55);
+  border: 1px solid rgba(36,38,34,.12); box-shadow: inset 0 3px 0 var(--accent); transform-origin: center top; }
+.mCalD i { font: 500 9.5px var(--mono); font-style: normal; color: var(--accent); letter-spacing: .04em; }
+.mCalD b { font: 500 26px/1.05 var(--serif); font-variant-numeric: tabular-nums; }
+.mCalD em { font: 500 10px var(--sans); font-style: normal; color: rgba(36,38,34,.6); }
+.mCalBar { grid-column: 1 / -1; height: 3px; border-radius: 3px; background: rgba(36,38,34,.14); overflow: hidden; }
+.mCalBar i { display: block; height: 100%; width: 0; background: var(--accent); }
+.mCalFoot { grid-column: 1 / -1; display: flex; justify-content: space-between; font: 500 9.5px var(--mono); color: rgba(36,38,34,.6); }
+.mCalFoot #mCalDp { color: var(--ink); }
+.mCalD.tick { animation: mCalFlip .42s cubic-bezier(.2,.8,.2,1); }
+.mCalWk.tick, #mCalWk.tick { animation: mCalPulse .42s ease-out; }
+@keyframes mCalFlip { 0% { transform: perspective(240px) rotateX(-70deg); opacity: .3; } 100% { transform: none; opacity: 1; } }
+@keyframes mCalPulse { 0% { transform: scale(1.14); color: var(--accent); } 100% { transform: none; } }

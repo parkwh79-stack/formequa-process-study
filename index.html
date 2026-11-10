@@ -26,7 +26,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4.4.0">
+<link rel="stylesheet" href="style.css?v=4.5.0">
 <!-- 오류가 나면 화면에 바로 보여 준다 (모듈 로딩 실패·file:// 실행 등 진단용) -->
 <script>
 (function () {
@@ -44,23 +44,23 @@
 { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
-    "./js/types.js": "./js/types.js?v=4.4.0",
-    "./js/project.js": "./js/project.js?v=4.4.0",
-    "./js/law.js": "./js/law.js?v=4.4.0",
-    "./js/parking.js": "./js/parking.js?v=4.4.0",
-    "./js/camera.js": "./js/camera.js?v=4.4.0",
-    "./js/walkthrough.js": "./js/walkthrough.js?v=4.4.0",
-    "./js/story.js": "./js/story.js?v=4.4.0",
-    "./js/kit.js": "./js/kit.js?v=4.4.0",
-    "./js/building.js": "./js/building.js?v=4.4.0",
-    "./js/interior.js": "./js/interior.js?v=4.4.0",
-    "./js/textures.js": "./js/textures.js?v=4.4.0",
-    "./js/sun.js": "./js/sun.js?v=4.4.0",
-    "./js/ui.js": "./js/ui.js?v=4.4.0",
-    "./js/elevator.js": "./js/elevator.js?v=4.4.0",
-    "./js/scroll-motion.js": "./js/scroll-motion.js?v=4.4.0",
-    "./js/access.js": "./js/access.js?v=4.4.0",
-    "./js/rect-patches.js": "./js/rect-patches.js?v=4.4.0"
+    "./js/types.js": "./js/types.js?v=4.5.0",
+    "./js/project.js": "./js/project.js?v=4.5.0",
+    "./js/law.js": "./js/law.js?v=4.5.0",
+    "./js/parking.js": "./js/parking.js?v=4.5.0",
+    "./js/camera.js": "./js/camera.js?v=4.5.0",
+    "./js/walkthrough.js": "./js/walkthrough.js?v=4.5.0",
+    "./js/story.js": "./js/story.js?v=4.5.0",
+    "./js/kit.js": "./js/kit.js?v=4.5.0",
+    "./js/building.js": "./js/building.js?v=4.5.0",
+    "./js/interior.js": "./js/interior.js?v=4.5.0",
+    "./js/textures.js": "./js/textures.js?v=4.5.0",
+    "./js/sun.js": "./js/sun.js?v=4.5.0",
+    "./js/ui.js": "./js/ui.js?v=4.5.0",
+    "./js/elevator.js": "./js/elevator.js?v=4.5.0",
+    "./js/scroll-motion.js": "./js/scroll-motion.js?v=4.5.0",
+    "./js/access.js": "./js/access.js?v=4.5.0",
+    "./js/rect-patches.js": "./js/rect-patches.js?v=4.5.0"
 } }
 </script>
 </head>
@@ -174,6 +174,13 @@
   <button id="mStart">▶ 바로 재생 <span id="mCount">4.44</span></button>
 </div>
 <aside class="mNote glass" id="mNote" aria-live="polite"><b id="mNoteT"></b><span id="mNoteD"></span></aside>
+<!-- v4.5 휴대폰 전용: 공정 구간에서 날짜·주차가 흘러가는 글래스 공정 달력 -->
+<aside class="mCal glass" id="mCal" aria-hidden="true">
+  <div class="mCalL"><div class="mCalW"><b id="mCalWk">W01</b><small id="mCalOf">/ 0주</small></div><div class="mCalPh" id="mCalPh">착공 준비</div></div>
+  <div class="mCalD" id="mCalD"><i id="mCalM">2027.01</i><b id="mCalDay">01</b><em id="mCalDow">월</em></div>
+  <div class="mCalBar"><i id="mCalFill"></i></div>
+  <div class="mCalFoot"><span id="mCalStart">착공</span><span id="mCalDp">D+0</span><span id="mCalEnd">준공</span></div>
+</aside>
 <div class="mBar glass" id="mBar">
   <button id="mPlay" aria-label="재생/일시정지">▶</button>
   <div class="mInfo"><output id="mChap">입면도</output><div class="mProg"><i id="mProgFill"></i></div></div>
@@ -206,6 +213,6 @@
 <div class="err" id="err"><b>실행 중 문제가 생겼습니다</b><pre></pre><small>이 내용을 캡처해 알려 주시면 원인을 바로 찾을 수 있습니다.</small></div>
 
 <i class="mk tl"></i><i class="mk tr"></i><i class="mk bl"></i><i class="mk br"></i>
-<script type="module" src="js/main.js?v=4.4.0"></script>
+<script type="module" src="js/main.js?v=4.5.0"></script>
 </body>
 </html>
